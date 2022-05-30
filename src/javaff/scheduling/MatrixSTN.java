@@ -3,27 +3,27 @@
  * Department of Computer and Information Sciences,
  * University of Strathclyde, Glasgow, UK
  * http://planning.cis.strath.ac.uk/
- * 
+ *
  * Copyright 2007, Keith Halsey
  * Copyright 2008, Andrew Coles and Amanda Smith
  *
  * (Questions/bug reports now to be sent to Andrew Coles)
  *
  * This file is part of JavaFF.
- * 
+ *
  * JavaFF is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * JavaFF is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with JavaFF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  ************************************************************************/
 
 package javaff.scheduling;
@@ -38,6 +38,7 @@ import javaff.data.temporal.StartInstantAction;
 import javaff.data.temporal.EndInstantAction;
 import javaff.data.temporal.DurativeAction;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Iterator;
@@ -45,7 +46,7 @@ import java.math.BigDecimal;
 
 public class MatrixSTN implements SimpleTemporalNetwork
 {
-	static BigDecimal EPSILON = javaff.JavaFF.EPSILON;
+    static BigDecimal EPSILON = javaff.JavaFF.EPSILON;
     static BigDecimal ZERO = new BigDecimal(0);
     static BigDecimal INF = new BigDecimal(100000);
     static BigDecimal NEG_EPSILON = EPSILON.negate();
@@ -54,19 +55,39 @@ public class MatrixSTN implements SimpleTemporalNetwork
 
     BigDecimal[][] TheArray;
     ArrayList Timepoints;
-	Plan pop;
+    Plan pop;
     int Size;
 
     InstantAction START = new STRIPSInstantAction();
 
     public MatrixSTN(Plan plan)
     {
-		pop = plan;
-		START.name = new OperatorName("TIME_ZERO");
-		
-		Timepoints = new ArrayList();
-		Timepoints.add(START);
+        pop = plan;
+        START.name = new OperatorName("TIME_ZERO");
+
+        Timepoints = new ArrayList();
+        Timepoints.add(START);
         Timepoints.addAll(pop.getActions());
+
+        ArrayList<InstantAction> missingTimepoints = new ArrayList<>();
+        //fill in with missing timepoints
+        for(InstantAction t1 : ((ArrayList<InstantAction>)Timepoints)) {
+            if (t1.equals(START))
+                continue;
+            int found = -1;
+            for (int j = 0; j < Timepoints.size(); j++)
+                if (!t1.equals((InstantAction) Timepoints.get(j)) && t1.isEqualIgnoreStartEnd((InstantAction) Timepoints.get(j))) {
+                    found = j;
+                    break;
+                }
+
+            if (found < 0) {
+                System.out.println("NOT FOUND END of " + t1);
+
+                //missingTimepoints
+
+            }
+        }
 
         ZERO = ZERO.setScale(SCALE, ROUND);
         INF = INF.setScale(SCALE, ROUND);
@@ -86,25 +107,49 @@ public class MatrixSTN implements SimpleTemporalNetwork
                 else TheArray[i][j] = INF;
             }
         }
+        System.out.println();
     }
 
 
-	public void addConstraints(Set constraints)
-	{
-		Iterator oit = constraints.iterator();
-		while (oit.hasNext())
-		{
-			TemporalConstraint c = (TemporalConstraint) oit.next();
-			addConstraint(c);
-		}
-	}
-	
-	public void addConstraint(TemporalConstraint c)
-	{
-		int firstpos = Timepoints.indexOf(c.y);
+    public void addConstraints(Set constraints)
+    {
+        Iterator oit = constraints.iterator();
+        while (oit.hasNext())
+        {
+            TemporalConstraint c = (TemporalConstraint) oit.next();
+            addConstraint(c);
+        }
+    }
+
+    public void addConstraint(TemporalConstraint c)
+    {
+        int firstpos = Timepoints.indexOf(c.y);
         int secondpos = Timepoints.indexOf(c.x);
-        TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
-	}
+        try{
+            System.out.println("\n\nAdding temp. contraint : ");
+            System.out.println("c.y: " + c.y + " (in Timepoints=" + firstpos + ")");
+            System.out.println("c.x: " + c.x + " (in Timepoints=" + secondpos + ")");
+            System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
+            TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
+            System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
+
+        }catch(Exception e){
+            System.out.println("Timepoints:");
+            for (int i=0; i<Timepoints.size(); i++){
+                InstantAction ia = ((InstantAction) Timepoints.get(i));
+                System.out.println(i+": " + ia);
+            }
+            System.out.println("\n\n");
+
+            System.out.println("\n\n");
+            for(int i=0; i<TheArray.length; i++) {
+                for (int j = 0; j < TheArray.length; j++)
+                    System.out.print(TheArray[i][j] + "\t\t");
+                System.out.println();
+            }
+            throw new IndexOutOfBoundsException("MONA");
+        }
+    }
 
     public void constrain()
     {
@@ -135,20 +180,20 @@ public class MatrixSTN implements SimpleTemporalNetwork
         return true;
     }
 
-	public boolean consistent()
-	{
-		constrain();
-		return check();
-	}
+    public boolean consistent()
+    {
+        constrain();
+        return check();
+    }
 
-	public boolean consistentSource(InstantAction a)
-	{
-		return consistent();
-	}
+    public boolean consistentSource(InstantAction a)
+    {
+        return consistent();
+    }
 
     public TimeStampedPlan getTimes()
     {
-		TimeStampedPlan plan = new TimeStampedPlan();
+        TimeStampedPlan plan = new TimeStampedPlan();
         Iterator ait = Timepoints.iterator();
         while (ait.hasNext())
         {
@@ -157,109 +202,109 @@ public class MatrixSTN implements SimpleTemporalNetwork
             {
                 DurativeAction da = ((StartInstantAction)a).parent;
                 BigDecimal time = TheArray[Timepoints.indexOf(a)][0].negate().setScale(SCALE,ROUND);
-				BigDecimal dur = TheArray[Timepoints.indexOf(da.endAction)][0].negate().subtract(time).setScale(SCALE,ROUND);
+                BigDecimal dur = TheArray[Timepoints.indexOf(da.endAction)][0].negate().subtract(time).setScale(SCALE,ROUND);
                 plan.addAction(da, time, dur);
             }
-			else if (a instanceof STRIPSInstantAction && a != START)
-			{
-				BigDecimal time = TheArray[Timepoints.indexOf(a)][0].negate().setScale(SCALE,ROUND);
-				plan.addAction(a, time);
-			}
+            else if (a instanceof STRIPSInstantAction && a != START)
+            {
+                BigDecimal time = TheArray[Timepoints.indexOf(a)][0].negate().setScale(SCALE,ROUND);
+                plan.addAction(a, time);
+            }
         }
         return plan;
     }
 
-	public boolean B(Action a, Action b)
-	{
-		BigDecimal v = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
-		return (v.compareTo(ZERO) < 0);
-	}
+    public boolean B(Action a, Action b)
+    {
+        BigDecimal v = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
+        return (v.compareTo(ZERO) < 0);
+    }
 
     public boolean BS(Action a, Action b)
     {
-		BigDecimal v = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
-		return (v.compareTo(ZERO) <= 0);
-	}
+        BigDecimal v = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
+        return (v.compareTo(ZERO) <= 0);
+    }
 
     public boolean U(Action a, Action b)
     {
-		BigDecimal v1 = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
-		BigDecimal v2 = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
-		return (v1.compareTo(ZERO) > 0 && v2.compareTo(ZERO) > 0);
-	}
+        BigDecimal v1 = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
+        BigDecimal v2 = TheArray[Timepoints.indexOf(b)][Timepoints.indexOf(a)];
+        return (v1.compareTo(ZERO) > 0 && v2.compareTo(ZERO) > 0);
+    }
 
-	public Action getEarliest(Set s)
-	{
-		Iterator sit = s.iterator();
-		Action c = null;
-		while (sit.hasNext())
-		{
-			Action a = (Action) sit.next();
-			if (c==null) c = a;
-			else if (TheArray[Timepoints.indexOf(c)][0].compareTo(TheArray[Timepoints.indexOf(a)][0])>0) c = a;
-		}
-		return c;
-	}
+    public Action getEarliest(Set s)
+    {
+        Iterator sit = s.iterator();
+        Action c = null;
+        while (sit.hasNext())
+        {
+            Action a = (Action) sit.next();
+            if (c==null) c = a;
+            else if (TheArray[Timepoints.indexOf(c)][0].compareTo(TheArray[Timepoints.indexOf(a)][0])>0) c = a;
+        }
+        return c;
+    }
 
-	public BigDecimal getMinimum(DurativeAction da)
-	{
-		return TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)].negate();
-		
-	}
+    public BigDecimal getMinimum(DurativeAction da)
+    {
+        return TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)].negate();
 
-	public BigDecimal getMaximum(DurativeAction da)
-	{
-		return TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)];
-	}
+    }
 
-	public void increaseMin(DurativeAction da, BigDecimal diff)
-	{
-		BigDecimal v1 = TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)];
-		BigDecimal v2 = v1.subtract(diff);
-		TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)] = v1.min(v2);
-	}
+    public BigDecimal getMaximum(DurativeAction da)
+    {
+        return TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)];
+    }
 
-	public void decreaseMax(DurativeAction da, BigDecimal diff)
-	{
-		BigDecimal v1 = TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)];
-		BigDecimal v2 = v1.subtract(diff);
-		TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)] = v1.min(v2);
-	}
+    public void increaseMin(DurativeAction da, BigDecimal diff)
+    {
+        BigDecimal v1 = TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)];
+        BigDecimal v2 = v1.subtract(diff);
+        TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)] = v1.min(v2);
+    }
 
-	public void maximize(DurativeAction da)
-	{
-		TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)] = TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)].negate();
-	}
+    public void decreaseMax(DurativeAction da, BigDecimal diff)
+    {
+        BigDecimal v1 = TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)];
+        BigDecimal v2 = v1.subtract(diff);
+        TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)] = v1.min(v2);
+    }
 
-	public void minimize(DurativeAction da)
-	{
-		TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)] = TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)].negate();
-	}
+    public void maximize(DurativeAction da)
+    {
+        TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)] = TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)].negate();
+    }
 
-	public void minimizeTime()
-	{
-		Iterator ait = Timepoints.iterator();
+    public void minimize(DurativeAction da)
+    {
+        TheArray[Timepoints.indexOf(da.startAction)][Timepoints.indexOf(da.endAction)] = TheArray[Timepoints.indexOf(da.endAction)][Timepoints.indexOf(da.startAction)].negate();
+    }
+
+    public void minimizeTime()
+    {
+        Iterator ait = Timepoints.iterator();
         while (ait.hasNext())
         {
             InstantAction a = (InstantAction) ait.next();;
             if (a instanceof EndInstantAction)
             {
-				int i = Timepoints.indexOf(a);
+                int i = Timepoints.indexOf(a);
                 if (TheArray[i][0].compareTo(TheArray[0][i].negate()) != 0)
-				{
-					TheArray[0][i] = TheArray[i][0].negate();
-					constrain();
-				}
+                {
+                    TheArray[0][i] = TheArray[i][0].negate();
+                    constrain();
+                }
             }
         }
 
 
-		
-	}
 
-	public void minimizeDuration()
-	{
-		Iterator ait = Timepoints.iterator();
+    }
+
+    public void minimizeDuration()
+    {
+        Iterator ait = Timepoints.iterator();
         while (ait.hasNext())
         {
             InstantAction a = (InstantAction) ait.next();;
@@ -269,9 +314,9 @@ public class MatrixSTN implements SimpleTemporalNetwork
                 minimize(da);
             }
         }
-	}
+    }
 
-	
+
 
     public void printArray()
     {
@@ -316,5 +361,5 @@ public class MatrixSTN implements SimpleTemporalNetwork
         return STN;
     }
 
-	
+
 }

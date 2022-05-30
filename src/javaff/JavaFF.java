@@ -210,7 +210,7 @@ public class JavaFF
 		infoOutput.println("Performing search as in FF - first considering EHC with only helpful actions");
 
 		// Now, initialise an EHC searcher
-		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState);
+		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, 500);
 
 		EHCS.setFilter(HelpfulFilter.getInstance()); // and use the helpful actions neighbourhood
 

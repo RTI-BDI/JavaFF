@@ -3,7 +3,7 @@ import java.io.File;
 import javaff.JavaFF;
 import javaff.data.Plan;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestJavaFF {
 
