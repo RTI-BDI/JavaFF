@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>javaff</name>
+  <version>0.0.0</version>
+  <description>Package containing ROS2 enwrapping of Online Javaff.</description>
+  <maintainer email="devis.dalmoro@unitn.it">Devis Dal Moro</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_export_jars</buildtool_depend>
+  <buildtool_depend>ament_build_type_gradle</buildtool_depend>
+
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+  <buildtool_depend>rosidl_generator_java</buildtool_depend>
+
+  <depend>rcljava</depend>
+  <depend>std_msgs</depend>
+  <depend>javaff_interfaces</depend>
+
+  <export>
+    <build_type>ament_gradle</build_type>
+  </export>
+</package>

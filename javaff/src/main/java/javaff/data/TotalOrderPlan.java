@@ -110,4 +110,15 @@ public class TotalOrderPlan implements Plan, Cloneable
 			pw.println("("+pit.next()+")");
 		}
 	}
+
+	public String getPrintablePlan()
+	{
+		String printablePlan = "";
+		Iterator pit = plan.iterator();
+		while (pit.hasNext())
+		{
+			printablePlan += ("("+pit.next()+")");
+		}
+		return printablePlan;
+	}
 }
