@@ -54,13 +54,13 @@ public abstract class State implements Cloneable
 
 //	public abstract Set getNextStates();       // get all the next possible states reachable from this state
 
-	public Set getNextStates(Set actions)      // get all the states after applying this set of actions
+	public Set<State> getNextStates(Set<Action> actions)      // get all the states after applying this set of actions
 	{
-		Set rSet = new HashSet();
-		Iterator ait = actions.iterator();
+		Set<State> rSet = new HashSet<State>();
+		Iterator<Action> ait = actions.iterator();
 		while (ait.hasNext())
 		{
-			Action a = (Action) ait.next();
+			Action a = ait.next();
 			rSet.add(this.apply(a));
 		}
 		return rSet;

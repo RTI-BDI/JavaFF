@@ -5,10 +5,13 @@ import org.ros2.rcljava.publisher.Publisher;
 // import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Hashtable;
 import java.util.StringTokenizer;  
 
 import javaff.JavaFF;
 import javaff.data.GroundProblem;
+import javaff.planning.State;
 import javaff.planning.TemporalMetricState;
 
 import plansys2_msgs.msg.Plan;
@@ -75,39 +78,44 @@ class SearchThread extends Thread{
   
   public void run(){
     this.sharedSearchData.open.clear();
-    this.sharedSearchData.open.add("");//TODO update this
 
-    while(true){
-      try{
-        this.sharedSearchData.searchLock.lock();
-          //System.out.println("[Thread search]: waiting to acquire lock "  + this.sharedSearchData.searchLock.getQueueLength());
-    
-          //System.out.println("[Thread search]: Searching from " + this.sharedSearchData.initialState + " (open[0]=" + this.sharedSearchData.open.get(0) + ") ...");
-          Thread.sleep(0);//searching phase
-          String planString = JavaFF.plan(this.sharedSearchData.groundProblem, this.sharedSearchData.initialState);
-          System.out.println("\n\nplanString: \n" + planString);        
+    int i = 0;
+    boolean unsat = false;
 
-          plansys2_msgs.msg.Plan planMessage = buildPsys2Plan(planString);
-          this.planPublisher.publish(planMessage);
+    while(!this.sharedSearchData.currentState.goalReached() && !unsat){
+      
+      System.out.println("\n\n ROUND " + (i++));
+      this.sharedSearchData.searchLock.lock();
 
-        this.sharedSearchData.searchLock.unlock();
-        if(killMySelf)//if true mspawner thread has set it, put it again to false and terminate your execution
-          return;
+        // move forward with the search for 500ms
+        this.sharedSearchData.currentState = (TemporalMetricState) JavaFF.performFFSearch(this.sharedSearchData.currentState, 500, this.sharedSearchData.open, this.sharedSearchData.closed);
+        
+        // build plan string from currentState
+        String planString = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
+        System.out.println(planString);
+        System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());
 
-        //TODO publish results
+        // build plan msg and publish it
+        plansys2_msgs.msg.Plan planMessage = buildPsys2Plan(planString);
+        this.planPublisher.publish(planMessage);
 
-      }catch(InterruptedException ie){
-        ie.printStackTrace();
-      } 
+        //check whether unsat ~ empty open and search has return null
+        unsat = this.sharedSearchData.open.isEmpty() && this.sharedSearchData.currentState == null;
+
+      this.sharedSearchData.searchLock.unlock();
+      if(killMySelf)//if true mspawner thread has set it, put it again to false and terminate your execution
+        return;
+
     }
   }
 }
 
 class SharedSearchData{
   GroundProblem groundProblem;
-  TemporalMetricState initialState;
+  TemporalMetricState currentState;
   
-  ArrayList<String> open = new ArrayList<>();//TODO just for skeleton
+  LinkedList<State> open = new LinkedList<>();
+  Hashtable<Integer, State> closed = new Hashtable<>();
   ReentrantLock searchLock = new ReentrantLock(true);
 }
 
@@ -149,7 +157,7 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
 
         // parse domain and problem, unground + ground processes, returning the initial state
         this.sharedSearchData.groundProblem = JavaFF.computeGroundProblem(domain, problem);
-        this.sharedSearchData.initialState = JavaFF.computeInitialState(this.sharedSearchData.groundProblem);
+        this.sharedSearchData.currentState = JavaFF.computeInitialState(this.sharedSearchData.groundProblem);
         // start search thread from initial state and init. search data
         this.searchThread = new SearchThread(sharedSearchData, planPublisher);
         this.searchThread.start();
@@ -175,7 +183,7 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
     public void unexpectedState(String newState){
       this.sharedSearchData.searchLock.lock();
         this.sharedSearchData.open.clear();
-        this.sharedSearchData.open.add(newState);
+        //this.sharedSearchData.open.add(newState);//TODO va fatto
       this.sharedSearchData.searchLock.unlock();
     }
 }

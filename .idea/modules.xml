@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/JavaFF.iml" filepath="$PROJECT_DIR$/JavaFF.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/JavaFF.iml" filepath="$PROJECT_DIR$/.idea/JavaFF.iml" />
     </modules>
   </component>
 </project>

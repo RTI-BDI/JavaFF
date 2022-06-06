@@ -34,6 +34,7 @@ import javaff.data.GroundProblem;
 import javaff.data.Plan;
 import javaff.data.TotalOrderPlan;
 import javaff.data.TimeStampedPlan;
+import javaff.data.temporal.DurativeAction;
 import javaff.parser.PDDL21parser;
 import javaff.planning.State;
 import javaff.planning.TemporalMetricState;
@@ -54,8 +55,7 @@ import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
 public class JavaFF
 {
@@ -387,7 +387,26 @@ public class JavaFF
 					")";
 			GroundProblem ground = Objects.requireNonNull(computeGroundProblem(domain, problem));
 			TemporalMetricState initial = ground.getTemporalMetricInitialState();
-			System.out.println(plan(ground, initial));
+			LinkedList<State> open = new LinkedList<>();
+			Hashtable<Integer, State> closed = new Hashtable<>();
+
+			int i = 0;
+			TemporalMetricState goalOrIntermediateState = initial;
+			do {
+				System.out.println("\n\n ROUND " + (i++));
+				goalOrIntermediateState = (TemporalMetricState) performFFSearch(goalOrIntermediateState, 400, open, closed);
+				System.out.println(buildPlan(ground, goalOrIntermediateState));
+				System.out.println("[main]: open.size="+open.size() + "\t closed.size=" + closed.size());
+			}while(!goalOrIntermediateState.goalReached() || (open.isEmpty() && goalOrIntermediateState == null));
+			/*
+				System.out.println("\n\nSECONDO ROUND");
+				TemporalMetricState goalOrIntermediateState2 = (TemporalMetricState) performFFSearch(goalOrIntermediateState, 600, open, closed);
+				System.out.println(buildPlan(ground, goalOrIntermediateState2));
+
+				System.out.println("\n\nTERZO ROUND");
+				TemporalMetricState goalOrIntermediateState3 = (TemporalMetricState) performFFSearch(goalOrIntermediateState2, 600, open, closed);
+				System.out.println(buildPlan(ground, goalOrIntermediateState3));
+			*/
 	}
 
 	public static GroundProblem computeGroundProblem(String domain, String problem)
@@ -430,23 +449,32 @@ public class JavaFF
 		return ground.getTemporalMetricInitialState();
 	}
 
-	public static String plan(GroundProblem ground, TemporalMetricState initialState)
+	public static TemporalMetricState applyOpenActions (TemporalMetricState intermediateState)
+	{
+		if((intermediateState).openActions.isEmpty())//you've found a proper sequence to apply them all
+			return intermediateState;
+
+		for(DurativeAction da : ((Set<DurativeAction>) (intermediateState).openActions)) {
+			if(da.isApplicable(intermediateState))
+				applyOpenActions((TemporalMetricState) ((TemporalMetricState) intermediateState).apply(da.endAction));
+		}
+
+		return null; //no proper sequence to close out all end snap-actions
+	}
+
+	public static String buildPlan(GroundProblem ground, TemporalMetricState goalState)
 	{
 		String plan = "";
-		
-		State goalState = performFFSearch(initialState);
 
-		//long afterPlanning = System.currentTimeMillis();
+		//TODO (1) ASK MR if it's okay to have it here and not modify the "original" intermediate state
+		//TODO (2) Apply Open Actions in the proper way, i.e. check why function above does not work!
+		for(DurativeAction da : ((Set<DurativeAction>) (goalState).openActions)) {
+			goalState = ((TemporalMetricState) ((TemporalMetricState) goalState).apply(da.endAction));
+		}
 
 		TotalOrderPlan top = null;
 		if (goalState != null) top = (TotalOrderPlan) goalState.getSolution();
 		if (top != null) plan = top.getPrintablePlan();
-
-
-		/*javaff.planning.PlanningGraph pg = initialState.getRPG();
-		Plan plan  = pg.getPlan(initialState);
-		plan.print(planOutput);
-		return null;*/
 
 		// ********************************
 		// Schedule a plan
@@ -463,19 +491,7 @@ public class JavaFF
 		 	tsp = scheduler.schedule(top);
 		}
 
-
-		// long afterScheduling = System.currentTimeMillis();
-
 		if (tsp != null) plan = tsp.getPrintablePlan();
-		System.out.println(plan);
-		// double groundingTime = (afterGrounding - startTime)/1000.00;
-		// double planningTime = (afterPlanning - afterGrounding)/1000.00;
-		// double schedulingTime = (afterScheduling - afterPlanning)/1000.00;
-
-		// infoOutput.println("Instantiation Time =\t\t"+groundingTime+"sec");
-		// infoOutput.println("Planning Time =\t"+planningTime+"sec");
-		// infoOutput.println("Scheduling Time =\t"+schedulingTime+"sec");
-
 
 		return plan;
 	}
@@ -497,38 +513,36 @@ public class JavaFF
 
 	}
 
-	public static State performFFSearch(TemporalMetricState initialState) {
-
+	public static State performFFSearch(TemporalMetricState initialState, float searchIntervalMs, LinkedList<State> open, Hashtable<Integer, State> closed) {
 
 
 		// Implementation of standard FF-style search
-
 		infoOutput.println("Performing search as in FF - first considering EHC with only helpful actions");
 
 		// Now, initialise an EHC searcher
-		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, 500);
+		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, searchIntervalMs, open, closed);
 
 		EHCS.setFilter(HelpfulFilter.getInstance()); // and use the helpful actions neighbourhood
 
 		// Try and find a plan using EHC
-		State goalState = EHCS.search();
+		State goalOrIntermediateState = EHCS.search();
 
-		if (goalState == null) // if we can't find one
+		if (goalOrIntermediateState == null) // if we can't find one
 		{
 			infoOutput.println("EHC failed, using best-first search, with all actions");
 
 			// create a Best-First Searcher
-			BestFirstSearch BFS = new BestFirstSearch(initialState);
+			// BestFirstSearch BFS = new BestFirstSearch(initialState);
 
 			// ... change to using the 'all actions' neighbourhood (a null filter, as it removes nothing)
 
-			BFS.setFilter(NullFilter.getInstance());
+			// BFS.setFilter(NullFilter.getInstance());
 
 			// and use that
-			goalState = BFS.search();
+			// goalState = BFS.search();
 		}
 
-		return goalState; // return the plan
+		return goalOrIntermediateState; // return the plan
 
 	}
 }
