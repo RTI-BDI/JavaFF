@@ -1,4 +1,5 @@
 string      domain
 string      problem
 ---
-bool        accepted
+bool          accepted
+string        msg

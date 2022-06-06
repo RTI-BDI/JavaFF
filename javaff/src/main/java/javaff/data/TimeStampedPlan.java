@@ -62,6 +62,15 @@ public class TimeStampedPlan implements Plan
 		}
 	}
 
+	public String getPrintablePlan()
+	{
+		StringBuilder result = new StringBuilder();
+		for (TimeStampedAction action : (Iterable<TimeStampedAction>) actions)
+			result.append((TimeStampedAction) action).append("\n");
+
+		return result.toString();
+	}
+
 	public void print(PrintWriter p)
 	{
 		Iterator ait = actions.iterator();

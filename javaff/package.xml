@@ -14,7 +14,7 @@
   <buildtool_depend>rosidl_generator_java</buildtool_depend>
 
   <depend>rcljava</depend>
-  <depend>std_msgs</depend>
+  <depend>example_interfaces</depend>
   <depend>javaff_interfaces</depend>
 
   <export>

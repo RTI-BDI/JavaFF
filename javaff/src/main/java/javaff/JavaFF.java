@@ -54,6 +54,7 @@ import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Random;
 
 public class JavaFF
@@ -101,7 +102,295 @@ public class JavaFF
 	// 	// if (solutionFile != null && plan != null) writePlanToFile(plan, solutionFile);
 	// }
 
-	public static TemporalMetricState computeInitialState(String domain, String problem)
+	public static void main(String[] args){
+			String domain = ";; domain file: printing-domain.pddl\n" +
+					"\n" +
+					"(define (domain printing-domain)\n" +
+					"\n" +
+					"    (:requirements :strips :typing :fluents :durative-actions)\n" +
+					"\n" +
+					"    ;; Types ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n" +
+					"    (:types\n" +
+					"        room hallway_segment - area\n" +
+					"        dock\n" +
+					"        robot\n" +
+					"        printer\n" +
+					"    );; end Types ;;;;;;;;;;;;;;;;;;;;;;;;;\n" +
+					"\n" +
+					"    (:predicates\n" +
+					"        (near ?a1 ?a2 - area)\n" +
+					"        (r_in ?r - robot ?a - area)\n" +
+					"        (r_docked ?r - robot)\n" +
+					"        (not_r_docked ?r - robot)\n" +
+					"        (d_in ?d - dock ?r - room)\n" +
+					"        (p_in ?p - printer ?h - hallway_segment)\n" +
+					"        (free ?a - area)\n" +
+					"        (inactive ?r - robot)\n" +
+					"        (active ?r - robot)\n" +
+					"        (available ?p - printer)\n" +
+					"        (printed_docs_loaded ?r - robot)\n" +
+					"        (printed_docs_left_in ?r - robot ?a - area)\n" +
+					"        (fully_recharged ?r - robot)\n" +
+					"    )\n" +
+					"\n" +
+					"    (:functions\n" +
+					"        (battery_charge ?r - robot)\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action running\n" +
+					"        :parameters (?r - robot)\n" +
+					"        :duration (= ?duration 80)\n" +
+					"        :condition (and \n" +
+					"            (at start (inactive ?r))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at start (active ?r))\n" +
+					"            (at start (not(inactive ?r)))\n" +
+					"            (at end (not(active ?r)))\n" +
+					"            (at end (inactive ?r))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action standby\n" +
+					"        :parameters (?r - robot)\n" +
+					"        :duration (= ?duration 80)\n" +
+					"        :condition (and \n" +
+					"            (at start (active ?r))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at start (inactive ?r))\n" +
+					"            (at start (not(active ?r)))\n" +
+					"            (at end (not(inactive ?r)))\n" +
+					"            (at end (active ?r))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action move\n" +
+					"        :parameters (?r - robot ?a1 ?a2 - area)\n" +
+					"        :duration (= ?duration 4)\n" +
+					"        :condition (and\n" +
+					"            (at start (r_in ?r ?a1))\n" +
+					"            (over all (active ?r))\n" +
+					"            (over all (not_r_docked ?r))\n" +
+					"            (over all (free ?a2))\n" +
+					"            (over all (near ?a1 ?a2))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at start (not(r_in ?r ?a1)))\n" +
+					"            (at end (r_in ?r ?a2))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action printing\n" +
+					"        :parameters (?r - robot ?p - printer ?hs - hallway_segment)\n" +
+					"        :duration (= ?duration 4)\n" +
+					"        :condition (and\n" +
+					"            (at start (available ?p))\n" +
+					"            (over all (active ?r))\n" +
+					"            (over all (not_r_docked ?r))\n" +
+					"            (over all (r_in ?r ?hs))\n" +
+					"            (over all (p_in ?p ?hs))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at start (not(available ?p)))\n" +
+					"            (at end (printed_docs_loaded ?r))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action unload_printed_docs\n" +
+					"        :parameters (?r - robot ?a - area)\n" +
+					"        :duration (= ?duration 2)\n" +
+					"        :condition (and\n" +
+					"            (at start (printed_docs_loaded ?r))\n" +
+					"            (over all (not_r_docked ?r))\n" +
+					"            (over all (active ?r))\n" +
+					"            (over all (r_in ?r ?a))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at end (not(printed_docs_loaded ?r)))\n" +
+					"            (at end (printed_docs_left_in ?r ?a))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action recharge\n" +
+					"        :parameters (?r - robot ?d - dock ?room - room)\n" +
+					"        :duration (= ?duration 2)\n" +
+					"        :condition (and\n" +
+					"            (over all (d_in ?d ?room))\n" +
+					"            (over all (r_docked ?r))\n" +
+					"            (over all (inactive ?r))\n" +
+					"            (over all (r_in ?r ?room))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at end (fully_recharged ?r))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action docking\n" +
+					"        :parameters (?r - robot ?d - dock ?room - room)\n" +
+					"        :duration (= ?duration 1)\n" +
+					"        :condition (and\n" +
+					"            (at start (not_r_docked ?r))\n" +
+					"            (over all (active ?r))\n" +
+					"            (over all (d_in ?d ?room))\n" +
+					"            (over all (r_in ?r ?room))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at end (not(not_r_docked ?r)))\n" +
+					"            (at end (r_docked ?r))\n" +
+					"        )\n" +
+					"    )\n" +
+					"\n" +
+					"    (:durative-action undocking\n" +
+					"        :parameters (?r - robot ?d - dock ?room - room)\n" +
+					"        :duration (= ?duration 1)\n" +
+					"        :condition (and\n" +
+					"            (at start (r_docked ?r))\n" +
+					"            (over all (active ?r))\n" +
+					"            (over all (d_in ?d ?room))\n" +
+					"            (over all (r_in ?r ?room))\n" +
+					"        )\n" +
+					"        :effect (and\n" +
+					"            (at end (not_r_docked ?r))\n" +
+					"            (at end (not(r_docked ?r)))\n" +
+					"        )\n" +
+					"    )\n" +
+					")\n";
+			String problem = "( define ( problem printing1 )\n" +
+					"( :domain printing-domain )\n" +
+					"    ( :objects\n" +
+					"        r1 r2 r3 - robot\n" +
+					"        p1 p2 - printer\n" +
+					"        r_a r_b r_c r_d r_e r_f - room\n" +
+					"        h11 h12 h13 h21 h22 h23 h31 h32 h33 - hallway_segment\n" +
+					"        h11_21 h13_23 h21_31 h23_33 - hallway_segment\n" +
+					"        d0 d1 d2 d3 - dock\n" +
+					"    )\n" +
+					"    ( :init\n" +
+					"        (near r_a h11)\n" +
+					"\n" +
+					"        (near h11 h12)\n" +
+					"        (near h11 h11_21)\n" +
+					"        (near h11 r_a)\n" +
+					"\n" +
+					"        (near h12 h11)\n" +
+					"        (near h12 h13)\n" +
+					"\n" +
+					"        (near h13 h12)\n" +
+					"        (near h13 r_d)\n" +
+					"        (near h13 h13_23)\n" +
+					"\n" +
+					"        (near r_d h13)\n" +
+					"\n" +
+					"        (near r_b h11_21)\n" +
+					"\n" +
+					"        (near h11_21 h11)\n" +
+					"        (near h11_21 h21)\n" +
+					"        (near h11_21 r_b)\n" +
+					"\n" +
+					"        (near h13_23 h13)\n" +
+					"        (near h13_23 h23)\n" +
+					"        (near h13_23 r_e)\n" +
+					"\n" +
+					"        (near r_e h13_23)\n" +
+					"\n" +
+					"        (near h21 h11_21)\n" +
+					"        (near h21 h22)\n" +
+					"        (near h21 h21_31)\n" +
+					"        \n" +
+					"        (near h22 h21)\n" +
+					"        (near h22 h23)\n" +
+					"\n" +
+					"        (near h23 h13_23)\n" +
+					"        (near h23 h22)\n" +
+					"        (near h23 h23_33)\n" +
+					"\n" +
+					"        (near r_c h21_31)\n" +
+					"\n" +
+					"        (near h21_31 r_c)\n" +
+					"        (near h21_31 h21)\n" +
+					"        (near h21_31 h31)\n" +
+					"\n" +
+					"        (near h23_33 h23)\n" +
+					"        (near h23_33 h33)\n" +
+					"        (near h23_33 r_e)\n" +
+					"\n" +
+					"        (near r_e h23_33)\n" +
+					"\n" +
+					"        (near h31 h21_31)\n" +
+					"        (near h31 h32)\n" +
+					"\n" +
+					"        (near h32 h31)\n" +
+					"        (near h32 h33)\n" +
+					"\n" +
+					"        (near h33 h23_33)\n" +
+					"        (near h33 h32)\n" +
+					"        (near h33 r_f)\n" +
+					"\n" +
+					"        (near r_f h33)\n" +
+					"\n" +
+					"        (free r_a)\n" +
+					"        (free r_b)\n" +
+					"        (free r_c)\n" +
+					"        (free r_d)\n" +
+					"        (free r_e)\n" +
+					"        (free r_f)\n" +
+					"\n" +
+					"        (free h11)\n" +
+					"        (free h12)\n" +
+					"\n" +
+					"        (free h11_21)\n" +
+					"        (free h13_23)\n" +
+					"\n" +
+					"        (free h21)\n" +
+					"        (free h23)\n" +
+					"\n" +
+					"        (free h21_31)\n" +
+					"        (free h23_33)\n" +
+					"\n" +
+					"        (free h31)\n" +
+					"        (free h32)\n" +
+					"        (free h33)\n" +
+					"\n" +
+					"        (p_in p1 h12)\n" +
+					"        (p_in p2 h32)\n" +
+					"\n" +
+					"        (available p1)\n" +
+					"\n" +
+					"        (d_in d0 r_c)\n" +
+					"        (d_in d1 r_c)\n" +
+					"        (d_in d2 r_c)\n" +
+					"        (d_in d3 r_c)\n" +
+					"\n" +
+					"        (r_in r1 r_d)\n" +
+					"        (inactive r1)\n" +
+					"        (not_r_docked r1)\n" +
+					"        \n" +
+					"        (r_in r2 r_c)\n" +
+					"        (inactive r2)\n" +
+					"        (r_docked r2)\n" +
+					"        \n" +
+					"        (r_in r3 r_c)\n" +
+					"        (inactive r3)\n" +
+					"        (r_docked r3)\n" +
+					"        \n" +
+					"        (= (battery_charge r1) 30)\n" +
+					"        (= (battery_charge r2) 100)\n" +
+					"        (= (battery_charge r3) 100)\n" +
+					"    )\n" +
+					"    ( :goal\n" +
+					"        ( and\n" +
+					"            ;; (r_in r2 h21_31)\n" +
+					"            (printed_docs_left_in r2 r_e)\n" +
+					"        )\n" +
+					"    )\n" +
+					")";
+			GroundProblem ground = Objects.requireNonNull(computeGroundProblem(domain, problem));
+			TemporalMetricState initial = ground.getTemporalMetricInitialState();
+			System.out.println(plan(ground, initial));
+	}
+
+	public static GroundProblem computeGroundProblem(String domain, String problem)
 	{
 		EPSILON = EPSILON.setScale(2,BigDecimal.ROUND_HALF_EVEN);
 		MAX_DURATION = MAX_DURATION.setScale(2,BigDecimal.ROUND_HALF_EVEN);
@@ -112,7 +401,7 @@ public class JavaFF
 		// ********************************
 		// Parse and Ground the Problem
 		// ********************************
-		long startTime = System.currentTimeMillis();
+		// long startTime = System.currentTimeMillis();
 
 		UngroundProblem unground = PDDL21parser.parseDomainAndProblem(domain, problem);
 
@@ -128,25 +417,26 @@ public class JavaFF
 
 		GroundProblem ground = unground.ground();
 
-		long afterGrounding = System.currentTimeMillis();
+		// long afterGrounding = System.currentTimeMillis();
 
 		// ********************************
 		// Search for a plan
 		// ********************************
-
-		// Get the initial state
-		initial = ground.getTemporalMetricInitialState();
 		
-		return initial;
+		return ground;
 	}
 
-	public static String plan(TemporalMetricState initialState)
+	public static TemporalMetricState computeInitialState(GroundProblem ground){
+		return ground.getTemporalMetricInitialState();
+	}
+
+	public static String plan(GroundProblem ground, TemporalMetricState initialState)
 	{
 		String plan = "";
 		
 		State goalState = performFFSearch(initialState);
 
-		long afterPlanning = System.currentTimeMillis();
+		//long afterPlanning = System.currentTimeMillis();
 
 		TotalOrderPlan top = null;
 		if (goalState != null) top = (TotalOrderPlan) goalState.getSolution();
@@ -162,22 +452,22 @@ public class JavaFF
 		// Schedule a plan
 		// ********************************
 
-		// TimeStampedPlan tsp = null;
+		TimeStampedPlan tsp = null;
 
-		// if (goalState != null)
-		// {
+		if (goalState != null)
+		{
 
-		// 	infoOutput.println("Scheduling");
+		 	infoOutput.println("Scheduling");
 
-		// 	Scheduler scheduler = new JavaFFScheduler(ground);
-		// 	tsp = scheduler.schedule(top);
-		// }
+		 	Scheduler scheduler = new JavaFFScheduler(ground);
+		 	tsp = scheduler.schedule(top);
+		}
 
 
 		// long afterScheduling = System.currentTimeMillis();
 
-		// if (tsp != null) tsp.print(planOutput);
-
+		if (tsp != null) plan = tsp.getPrintablePlan();
+		System.out.println(plan);
 		// double groundingTime = (afterGrounding - startTime)/1000.00;
 		// double planningTime = (afterPlanning - afterGrounding)/1000.00;
 		// double schedulingTime = (afterScheduling - afterPlanning)/1000.00;

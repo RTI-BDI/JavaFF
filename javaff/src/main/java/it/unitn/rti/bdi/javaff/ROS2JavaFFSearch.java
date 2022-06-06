@@ -7,15 +7,16 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
 
 import javaff.JavaFF;
+import javaff.data.GroundProblem;
 import javaff.planning.TemporalMetricState;
 
 class SearchThread extends Thread{
 
   private boolean killMySelf = false;
   private SharedSearchData sharedSearchData;
-  private Publisher<std_msgs.msg.String> planPublisher;
+  private Publisher<example_interfaces.msg.String> planPublisher;
 
-  public SearchThread(SharedSearchData sharedSearchData, Publisher<std_msgs.msg.String> planPublisher){
+  public SearchThread(SharedSearchData sharedSearchData, Publisher<example_interfaces.msg.String> planPublisher){
     super();
     this.sharedSearchData = sharedSearchData;
     this.planPublisher = planPublisher;
@@ -34,8 +35,8 @@ class SearchThread extends Thread{
     
           //System.out.println("[Thread search]: Searching from " + this.sharedSearchData.initialState + " (open[0]=" + this.sharedSearchData.open.get(0) + ") ...");
           Thread.sleep(0);//searching phase
-          String planString = JavaFF.plan(this.sharedSearchData.initialState);
-          std_msgs.msg.String planMessage = new std_msgs.msg.String();
+          String planString = JavaFF.plan(this.sharedSearchData.groundProblem, this.sharedSearchData.initialState);
+          example_interfaces.msg.String planMessage = new example_interfaces.msg.String();
           planMessage.setData(planString);
           this.planPublisher.publish(planMessage);
 
@@ -53,6 +54,7 @@ class SearchThread extends Thread{
 }
 
 class SharedSearchData{
+  GroundProblem groundProblem;
   TemporalMetricState initialState;//TODO just for skeleton
   ArrayList<String> open = new ArrayList<>();//TODO just for skeleton
   ReentrantLock searchLock = new ReentrantLock(true);
@@ -67,7 +69,7 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
 
     private SharedSearchData sharedSearchData;
 
-    private Publisher<std_msgs.msg.String> planPublisher;
+    private Publisher<example_interfaces.msg.String> planPublisher;
 
     // private AtomicBoolean killSearchThread = new AtomicBoolean(false);
 
@@ -76,21 +78,46 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
     public ROS2JavaFFSearch(String name, int i) {
       super(name, i);
       this.sharedSearchData = new SharedSearchData();
-      this.planPublisher = this.node.<std_msgs.msg.String>createPublisher(std_msgs.msg.String.class, "plan");
+      this.planPublisher = this.node.<example_interfaces.msg.String>createPublisher(example_interfaces.msg.String.class, "plan");
     }
 
-    public void startSearch(String domain, String problem) throws InterruptedException{
+    public OperationResult startSearch(String domain, String problem){
+      OperationResult returnObj = new OperationResult(false, "Search for a plan has not been started");
+      
       try{
-        if(this.searchThread.isAlive()){
-          System.out.println("Search thread already up: waiting for it to stop...");
-          this.searchThread.killMySelf();
-          this.searchThread.join();
-        }
-      }catch(NullPointerException ne){}//handle first call in which thread has not been started yet or no one is running
 
-      this.sharedSearchData.initialState = JavaFF.computeInitialState(domain, problem);
-      this.searchThread = new SearchThread(sharedSearchData, planPublisher);
-      this.searchThread.start();
+        // kill search thread if there is one already alive -> might cause npe: just ignore it
+        try{
+          if(this.searchThread.isAlive()){
+            System.out.println("Search thread already up: waiting for it to stop...");
+            this.searchThread.killMySelf();
+            this.searchThread.join();
+          }
+        }catch(NullPointerException ne){}//handle first call in which thread has not been started yet or no one is running
+
+        // parse domain and problem, unground + ground processes, returning the initial state
+        this.sharedSearchData.groundProblem = JavaFF.computeGroundProblem(domain, problem);
+        this.sharedSearchData.initialState = JavaFF.computeInitialState(this.sharedSearchData.groundProblem);
+        // start search thread from initial state and init. search data
+        this.searchThread = new SearchThread(sharedSearchData, planPublisher);
+        this.searchThread.start();
+
+        returnObj.result = true;  
+        returnObj.msg = "Search for a plan has been started successfully";
+
+      }catch(javaff.parser.TokenMgrError mgrError){
+        String msgError = mgrError.toString();
+        returnObj.msg = msgError; 
+        if((msgError.contains("EOF") && msgError.contains("Lexical error at line 1")))
+          returnObj.msg += "\n\nNOTE: Might be due to lack of proper end-line characters in " + ((msgError.contains("domain"))? "domain":"problem") + " string!";
+        returnObj.result = false;  
+
+      }catch(InterruptedException ie){
+        returnObj.result = false;  
+        returnObj.msg = "Search for a plan has not been started successfully due to an internal error";
+      }
+      
+      return returnObj;
     }
 
     public void unexpectedState(String newState){

@@ -48,14 +48,11 @@ public class ROS2JavaFFServer extends ROS2JavaFF{
             System.out.println("DOMAIN: " + request.getDomain());
             System.out.println("PROBLEM: " + request.getProblem());
 
-            try{
-                searchNode.startSearch(request.getDomain(), request.getProblem());
+            OperationResult startSearchStatus = searchNode.startSearch(request.getDomain(), request.getProblem());
 
-                //TODO get meaningful boolean from previous call
-                response.setAccepted(true);
-            }catch(InterruptedException ie){
-                response.setAccepted(false);
-            }   
+            //TODO get meaningful boolean from previous call
+            response.setAccepted(startSearchStatus.result);
+            response.setMsg(startSearchStatus.msg);
             
     }
 

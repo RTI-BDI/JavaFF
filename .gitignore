@@ -1,2 +1,6 @@
 out/
+javaff/gradle/*
+javaff/.gradle/*
+javaff/.idea/*
 .idea/*
+javaff/src/main/java/javaff/.idea/*

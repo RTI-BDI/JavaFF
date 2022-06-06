@@ -125,30 +125,34 @@ public class MatrixSTN implements SimpleTemporalNetwork
     {
         int firstpos = Timepoints.indexOf(c.y);
         int secondpos = Timepoints.indexOf(c.x);
-        try{
-            System.out.println("\n\nAdding temp. contraint : ");
-            System.out.println("c.y: " + c.y + " (in Timepoints=" + firstpos + ")");
-            System.out.println("c.x: " + c.x + " (in Timepoints=" + secondpos + ")");
-            System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
-            TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
-            System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
+        TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
 
-        }catch(Exception e){
-            System.out.println("Timepoints:");
-            for (int i=0; i<Timepoints.size(); i++){
-                InstantAction ia = ((InstantAction) Timepoints.get(i));
-                System.out.println(i+": " + ia);
-            }
-            System.out.println("\n\n");
+        // int firstpos = Timepoints.indexOf(c.y);
+        // int secondpos = Timepoints.indexOf(c.x);
+        // try{
+        //     System.out.println("\n\nAdding temp. contraint : ");
+        //     System.out.println("c.y: " + c.y + " (in Timepoints=" + firstpos + ")");
+        //     System.out.println("c.x: " + c.x + " (in Timepoints=" + secondpos + ")");
+        //     System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
+        //     TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
+        //     System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
 
-            System.out.println("\n\n");
-            for(int i=0; i<TheArray.length; i++) {
-                for (int j = 0; j < TheArray.length; j++)
-                    System.out.print(TheArray[i][j] + "\t\t");
-                System.out.println();
-            }
-            throw new IndexOutOfBoundsException("MONA");
-        }
+        // }catch(Exception e){
+        //     System.out.println("Timepoints:");
+        //     for (int i=0; i<Timepoints.size(); i++){
+        //         InstantAction ia = ((InstantAction) Timepoints.get(i));
+        //         System.out.println(i+": " + ia);
+        //     }
+        //     System.out.println("\n\n");
+
+        //     System.out.println("\n\n");
+        //     for(int i=0; i<TheArray.length; i++) {
+        //         for (int j = 0; j < TheArray.length; j++)
+        //             System.out.print(TheArray[i][j] + "\t\t");
+        //         System.out.println();
+        //     }
+        //     throw new IndexOutOfBoundsException("MONA");
+        // }
     }
 
     public void constrain()

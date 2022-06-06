@@ -113,12 +113,12 @@ public class TotalOrderPlan implements Plan, Cloneable
 
 	public String getPrintablePlan()
 	{
-		String printablePlan = "";
+		StringBuilder printablePlan = new StringBuilder();
 		Iterator pit = plan.iterator();
 		while (pit.hasNext())
 		{
-			printablePlan += ("("+pit.next()+")");
+			printablePlan.append("(").append(pit.next()).append(")\n");
 		}
-		return printablePlan;
+		return printablePlan.toString();
 	}
 }
