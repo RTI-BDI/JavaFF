@@ -21,9 +21,9 @@ class SearchThread extends Thread{
 
   private boolean killMySelf = false;
   private SharedSearchData sharedSearchData;
-  private Publisher<plansys2_msgs.msg.Plan> planPublisher;
+  private Publisher<javaff_interfaces.msg.PartialPlans> planPublisher;
 
-  public SearchThread(SharedSearchData sharedSearchData, Publisher<plansys2_msgs.msg.Plan> planPublisher){
+  public SearchThread(SharedSearchData sharedSearchData, Publisher<javaff_interfaces.msg.PartialPlans> planPublisher){
     super();
     this.sharedSearchData = sharedSearchData;
     this.planPublisher = planPublisher;
@@ -74,6 +74,35 @@ class SearchThread extends Thread{
     return psys2Plan;
   }
 
+  /*
+   * Check diff between old javaff_interfaces.msg.PartialPlans msg and newly instantiated plansys2_msgs.msg.Plan msg received from the search
+   * to produce a new array of partial plans. In the general case, the append of the new plan will suffice, but when a completely new path has been computed,
+   * old published paths that are still not executed might need to be replaced
+  */
+  private javaff_interfaces.msg.PartialPlans buildNewPartialPlansMsg(javaff_interfaces.msg.PartialPlans oldPartialPlansMsg, plansys2_msgs.msg.Plan currentPlanMsg){
+    float maxStartTime = -1.0F;
+    plansys2_msgs.msg.Plan newPPlan = new plansys2_msgs.msg.Plan();
+    ArrayList<plansys2_msgs.msg.PlanItem> newItems = new ArrayList<plansys2_msgs.msg.PlanItem>();
+    
+    // Iterate over old partial plans, determining highest start time so that it can be used as a lower bound after to identify the newly computed actions
+    for(plansys2_msgs.msg.Plan oldPlan : oldPartialPlansMsg.getPlans())
+      for(plansys2_msgs.msg.PlanItem oldItem : oldPlan.getItems())
+        if(oldItem.getTime() > maxStartTime)
+          maxStartTime = oldItem.getTime();
+    
+    // Iterate for new items to compose a partial plan
+    for(plansys2_msgs.msg.PlanItem newItem : currentPlanMsg.getItems())
+      if(newItem.getTime() > maxStartTime)
+        newItems.add(newItem);
+    
+    if(!newItems.isEmpty()){//found some new item, i.e. a new partial plan to be executed will be added
+      newPPlan.setItems(newItems);
+      oldPartialPlansMsg.getPlans().add(newPPlan);
+    }
+
+    return oldPartialPlansMsg;
+  }
+
   public void killMySelf(){killMySelf = true;}
   
   public void run(){
@@ -96,8 +125,11 @@ class SearchThread extends Thread{
         System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());
 
         // build plan msg and publish it
-        plansys2_msgs.msg.Plan planMessage = buildPsys2Plan(planString);
-        this.planPublisher.publish(planMessage);
+        plansys2_msgs.msg.Plan currentPlanMsg = buildPsys2Plan(planString);
+        
+        this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg(this.sharedSearchData.partialPlansMsg, currentPlanMsg);
+        
+        this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
 
         //check whether unsat ~ empty open and search has return null
         unsat = this.sharedSearchData.open.isEmpty() && this.sharedSearchData.currentState == null;
@@ -108,11 +140,14 @@ class SearchThread extends Thread{
 
     }
   }
+
 }
 
 class SharedSearchData{
   GroundProblem groundProblem;
   TemporalMetricState currentState;
+
+  javaff_interfaces.msg.PartialPlans partialPlansMsg = new javaff_interfaces.msg.PartialPlans();
   
   LinkedList<State> open = new LinkedList<>();
   Hashtable<Integer, State> closed = new Hashtable<>();
@@ -128,7 +163,7 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
 
     private SharedSearchData sharedSearchData;
 
-    private Publisher<plansys2_msgs.msg.Plan> planPublisher;
+    private Publisher<javaff_interfaces.msg.PartialPlans> planPublisher;
 
     // private AtomicBoolean killSearchThread = new AtomicBoolean(false);
 
@@ -137,7 +172,7 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
     public ROS2JavaFFSearch(String name, int i) {
       super(name, i);
       this.sharedSearchData = new SharedSearchData();
-      this.planPublisher = this.node.<plansys2_msgs.msg.Plan>createPublisher(plansys2_msgs.msg.Plan.class, "plan");
+      this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, "plan");
 
     }
 
@@ -155,9 +190,16 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
           }
         }catch(NullPointerException ne){}//handle first call in which thread has not been started yet or no one is running
 
+        // START NEW SEARCH
+
+        // init again shared structures for search and partial plans composition (groundProblem and initial TMS are going to be computed just below)
+        this.sharedSearchData.partialPlansMsg = new javaff_interfaces.msg.PartialPlans();
+        this.sharedSearchData.open = new LinkedList<>();
+        this.sharedSearchData.closed = new Hashtable<>();
         // parse domain and problem, unground + ground processes, returning the initial state
         this.sharedSearchData.groundProblem = JavaFF.computeGroundProblem(domain, problem);
         this.sharedSearchData.currentState = JavaFF.computeInitialState(this.sharedSearchData.groundProblem);
+
         // start search thread from initial state and init. search data
         this.searchThread = new SearchThread(sharedSearchData, planPublisher);
         this.searchThread.start();
@@ -186,4 +228,5 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
         //this.sharedSearchData.open.add(newState);//TODO va fatto
       this.sharedSearchData.searchLock.unlock();
     }
+   
 }
