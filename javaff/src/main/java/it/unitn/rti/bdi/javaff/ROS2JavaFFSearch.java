@@ -9,6 +9,9 @@ import java.util.LinkedList;
 import java.util.Hashtable;
 import java.util.StringTokenizer;  
 
+
+import org.ros2.rcljava.node.BaseComposableNode;
+
 import javaff.JavaFF;
 import javaff.data.GroundProblem;
 import javaff.planning.State;
@@ -154,7 +157,7 @@ class SharedSearchData{
   ReentrantLock searchLock = new ReentrantLock(true);
 }
 
-public class ROS2JavaFFSearch extends ROS2JavaFF{
+public class ROS2JavaFFSearch extends BaseComposableNode{
     
     // Sibling node handling service request wrt. online planning
     private ROS2JavaFFServer serverNode;
@@ -169,12 +172,13 @@ public class ROS2JavaFFSearch extends ROS2JavaFF{
 
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
 
-    public ROS2JavaFFSearch(String name, int i) {
-      super(name, i);
+    public ROS2JavaFFSearch(String name) {
+      super(name);
       this.sharedSearchData = new SharedSearchData();
       this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, "plan");
-
-    }
+      System.out.println("ns=" + this.node.getNamespace());
+      // System.out.println("context= " + this.node.getContext());
+    } 
 
     public OperationResult startSearch(String domain, String problem){
       OperationResult returnObj = new OperationResult(false, "Search for a plan has not been started");

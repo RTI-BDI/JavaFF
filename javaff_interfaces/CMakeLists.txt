@@ -16,7 +16,8 @@ rosidl_generator_java_get_typesupports(_java_type_supports)
 
 rosidl_generate_interfaces( ${PROJECT_NAME}
   
-  "msg/PlanExecStatus.msg"
+  "msg/PlanItemExecStatus.msg"
+  "msg/PartialPlanExecStatus.msg"
   "msg/PartialPlansExecStatus.msg"
   "msg/PartialPlans.msg"
 
