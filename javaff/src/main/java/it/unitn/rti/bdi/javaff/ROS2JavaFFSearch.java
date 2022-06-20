@@ -172,8 +172,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
 
-    public ROS2JavaFFSearch(String name) {
-      super(name);
+    public ROS2JavaFFSearch(String name, String namespace) {
+      super(name, namespace);
       this.sharedSearchData = new SharedSearchData();
       this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, "plan");
       System.out.println("ns=" + this.node.getNamespace());

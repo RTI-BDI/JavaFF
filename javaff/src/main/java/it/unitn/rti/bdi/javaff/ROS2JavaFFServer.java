@@ -19,8 +19,8 @@ public class ROS2JavaFFServer extends BaseComposableNode{
     // if it's not reachable, JavaFF nodes will be considered inactive)
     private Service<lifecycle_msgs.srv.GetState> getStateService;
 
-    public ROS2JavaFFServer(String name) {
-        super(name);
+    public ROS2JavaFFServer(String name, String namespace) {
+        super(name, namespace);
 
         try{
             this.planService =

@@ -27,6 +27,7 @@ repositories {
 ament {
     entryPoints {
         consoleScripts = [
+            'test_node = it.unitn.rti.bdi.javaff.TestNode',
             'javaff_nodes = it.unitn.rti.bdi.javaff.ROS2JavaFF',
             'javaff_client = it.unitn.rti.bdi.javaff.PlannerClient'
         ]

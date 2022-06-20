@@ -15,6 +15,7 @@
 
   <depend>rcljava</depend>
   <depend>plansys2_msgs</depend>
+  <depend>lifecycle_msgs</depend>
   <depend>example_interfaces</depend>
   <depend>javaff_interfaces</depend>
 
