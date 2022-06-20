@@ -34,7 +34,7 @@ public class PlannerClient {
 ;
     Client<javaff_interfaces.srv.JavaFFPlan> client =
         node.<javaff_interfaces.srv.JavaFFPlan>createClient(
-            javaff_interfaces.srv.JavaFFPlan.class, "start_plan");
+            javaff_interfaces.srv.JavaFFPlan.class, "/cleaner/javaff_server/start_plan");
 
     javaff_interfaces.srv.JavaFFPlan_Request request =
         new javaff_interfaces.srv.JavaFFPlan_Request();

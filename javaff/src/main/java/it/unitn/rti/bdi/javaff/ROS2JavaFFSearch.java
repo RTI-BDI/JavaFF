@@ -176,8 +176,6 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       super(name, namespace);
       this.sharedSearchData = new SharedSearchData();
       this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, "plan");
-      System.out.println("ns=" + this.node.getNamespace());
-      // System.out.println("context= " + this.node.getContext());
     } 
 
     public OperationResult startSearch(String domain, String problem){

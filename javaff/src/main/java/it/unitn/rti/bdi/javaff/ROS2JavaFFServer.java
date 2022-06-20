@@ -43,8 +43,6 @@ public class ROS2JavaFFServer extends BaseComposableNode{
                     (RMWRequestId header, lifecycle_msgs.srv.GetState_Request request,
                         lifecycle_msgs.srv.GetState_Response response)
                         -> this.handleGetStateService(header, request, response));
-            
-            System.out.println("ns=" + this.node.getNamespace());
 
         }catch(Exception e){
           System.err.println("Service \"start_plan\" cannot be started");

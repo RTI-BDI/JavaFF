@@ -4,3 +4,4 @@ javaff/.gradle/*
 javaff/.idea/*
 .idea/*
 javaff/src/main/java/javaff/.idea/*
+javaff/src/main/java/it/unitn/rti/bdi/javaff/TestNode.java
