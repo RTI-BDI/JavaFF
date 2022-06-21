@@ -39,23 +39,23 @@ public class PlannerClient {
     javaff_interfaces.srv.JavaFFPlan_Request request =
         new javaff_interfaces.srv.JavaFFPlan_Request();
 
-    String domain = "";
-    boolean errorDomain = false;
+    // String domain = "";
+    // boolean errorDomain = false;
 
-    try {
-        File myObj = new File("/home/devis/Documents/pddl/printing/domain.pddl");
-        Scanner myReader = new Scanner(myObj);
-        while (myReader.hasNextLine()) {
-            domain += myReader.nextLine() + "\n";
-        }
-        myReader.close();
-        System.out.println("\n\nDOMAIN:\n" + domain);
+    // try {
+    //     File myObj = new File("/home/devis/Documents/pddl/printing/domain.pddl");
+    //     Scanner myReader = new Scanner(myObj);
+    //     while (myReader.hasNextLine()) {
+    //         domain += myReader.nextLine() + "\n";
+    //     }
+    //     myReader.close();
+    //     System.out.println("\n\nDOMAIN:\n" + domain);
 
-    } catch (FileNotFoundException e) {
-        errorDomain = true;
-        System.out.println("An error occurred while reading domain file.");
-        e.printStackTrace();
-    }
+    // } catch (FileNotFoundException e) {
+    //     errorDomain = true;
+    //     System.out.println("An error occurred while reading domain file.");
+    //     e.printStackTrace();
+    // }
 
     String problem = "";
     boolean errorProblem = false;
@@ -75,8 +75,8 @@ public class PlannerClient {
         e.printStackTrace();
     }
    
-    if(!errorDomain && !errorProblem){
-        request.setDomain(domain);
+    if(/*!errorDomain && */!errorProblem){
+        request.setSearchInterval(500);
         request.setProblem(problem);
 
         if (client.waitForService()) {

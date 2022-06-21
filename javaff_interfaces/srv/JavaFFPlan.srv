@@ -1,5 +1,5 @@
-string      domain
 string      problem
+int32       search_interval
 ---
 bool          accepted
 string        msg

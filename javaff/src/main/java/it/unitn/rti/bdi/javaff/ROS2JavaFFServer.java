@@ -68,10 +68,9 @@ public class ROS2JavaFFServer extends BaseComposableNode{
         final javaff_interfaces.srv.JavaFFPlan_Request request,
         final javaff_interfaces.srv.JavaFFPlan_Response response){
         //TODO remove print, just for debugging
-        System.out.println("DOMAIN: " + request.getDomain());
         System.out.println("PROBLEM: " + request.getProblem());
 
-        OperationResult startSearchStatus = searchNode.startSearch(request.getDomain(), request.getProblem());
+        OperationResult startSearchStatus = searchNode.startSearch(request.getProblem(), request.getSearchInterval());
 
         //TODO get meaningful boolean from previous call
         response.setAccepted(startSearchStatus.result);

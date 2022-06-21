@@ -120,7 +120,7 @@ class SearchThread extends Thread{
       this.sharedSearchData.searchLock.lock();
 
         // move forward with the search for 500ms
-        this.sharedSearchData.currentState = (TemporalMetricState) JavaFF.performFFSearch(this.sharedSearchData.currentState, 500, this.sharedSearchData.open, this.sharedSearchData.closed);
+        this.sharedSearchData.currentState = (TemporalMetricState) JavaFF.performFFSearch(this.sharedSearchData.currentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
         
         // build plan string from currentState
         String planString = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
@@ -155,6 +155,8 @@ class SharedSearchData{
   LinkedList<State> open = new LinkedList<>();
   Hashtable<Integer, State> closed = new Hashtable<>();
   ReentrantLock searchLock = new ReentrantLock(true);
+
+  int intervalSearchMS;
 }
 
 public class ROS2JavaFFSearch extends BaseComposableNode{
@@ -168,17 +170,21 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private Publisher<javaff_interfaces.msg.PartialPlans> planPublisher;
 
+    private String domain;
+
     // private AtomicBoolean killSearchThread = new AtomicBoolean(false);
 
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
 
-    public ROS2JavaFFSearch(String name, String namespace) {
+    public ROS2JavaFFSearch(String name, String namespace, String domain) {
       super(name, namespace);
+      this.domain = domain;
+
       this.sharedSearchData = new SharedSearchData();
-      this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, "plan");
+      this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, name + "/plan");
     } 
 
-    public OperationResult startSearch(String domain, String problem){
+    public OperationResult startSearch(String problem, int intervalSearchMS){
       OperationResult returnObj = new OperationResult(false, "Search for a plan has not been started");
       
       try{
@@ -199,8 +205,10 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         this.sharedSearchData.open = new LinkedList<>();
         this.sharedSearchData.closed = new Hashtable<>();
         // parse domain and problem, unground + ground processes, returning the initial state
-        this.sharedSearchData.groundProblem = JavaFF.computeGroundProblem(domain, problem);
+        this.sharedSearchData.groundProblem = JavaFF.computeGroundProblem(this.domain, problem);
         this.sharedSearchData.currentState = JavaFF.computeInitialState(this.sharedSearchData.groundProblem);
+
+        this.sharedSearchData.intervalSearchMS = intervalSearchMS > 100? intervalSearchMS : 100;
 
         // start search thread from initial state and init. search data
         this.searchThread = new SearchThread(sharedSearchData, planPublisher);
