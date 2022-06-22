@@ -114,28 +114,33 @@ class SearchThread extends Thread{
     int i = 0;
     boolean unsat = false;
 
-    while(!this.sharedSearchData.currentState.goalReached() && !unsat){
+    while(!unsat && !this.sharedSearchData.currentState.goalReached()){
       
-      System.out.println("\n\n ROUND " + (i++));
+      //System.out.println("\n\n ROUND " + (i++));
       this.sharedSearchData.searchLock.lock();
 
         // move forward with the search for 500ms
         this.sharedSearchData.currentState = (TemporalMetricState) JavaFF.performFFSearch(this.sharedSearchData.currentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
-        
-        // build plan string from currentState
-        String planString = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
-        System.out.println(planString);
-        System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());
-
-        // build plan msg and publish it
-        plansys2_msgs.msg.Plan currentPlanMsg = buildPsys2Plan(planString);
-        
-        this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg(this.sharedSearchData.partialPlansMsg, currentPlanMsg);
-        
-        this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
 
         //check whether unsat ~ empty open and search has return null
         unsat = this.sharedSearchData.open.isEmpty() && this.sharedSearchData.currentState == null;
+
+        if(!unsat){
+          // build plan string from currentState
+          String planString = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
+          System.out.println(planString);
+          System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());
+          // build plan msg and publish it
+          plansys2_msgs.msg.Plan currentPlanMsg = buildPsys2Plan(planString);
+          
+          this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg(this.sharedSearchData.partialPlansMsg, currentPlanMsg);
+          
+          this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
+        
+        }else{
+          //TODO define and implement how to behave here!!! idea: could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  
+        }
+        
 
       this.sharedSearchData.searchLock.unlock();
       if(killMySelf)//if true mspawner thread has set it, put it again to false and terminate your execution

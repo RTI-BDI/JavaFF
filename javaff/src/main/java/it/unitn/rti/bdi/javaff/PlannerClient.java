@@ -61,7 +61,7 @@ public class PlannerClient {
     boolean errorProblem = false;
 
     try {
-        File myObj = new File("/home/devis/Documents/pddl/printing/problem.pddl");
+        File myObj = new File("/home/alex/cleaner_problem.pddl");
         Scanner myReader = new Scanner(myObj);
         while (myReader.hasNextLine()) {
             problem += myReader.nextLine() + "\n";

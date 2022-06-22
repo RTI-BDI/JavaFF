@@ -60,13 +60,12 @@ public class ROS2JavaFF{
     //retrieve namespace from cli args[]
     String ns = String.join("", args);
     ns = ns.substring(ns.lastIndexOf("ns:=/") + "ns:=/".length());
-
+    System.out.println("Setting up namespace \"" + ns + "\"");
     String domainFilepath = retrieveDomainFilepath(args);
+    System.out.println("Reading domain file from \"" + domainFilepath + "\"");
     String domain = readFile(domainFilepath);
 
-    // System.out.println("Setting up namespace \"" + ns + "\"");
-    // System.out.println("Reading domain file from \"" + domainFilepath + "\"");
-    // System.out.println("Loaded domain file: \"" + domain + "\"");
+    //System.out.println("Loaded domain file: \"" + domain + "\"");
 
     // Initialize RCL
     RCLJava.rclJavaInit();
