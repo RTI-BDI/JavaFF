@@ -30,8 +30,8 @@ package javaff.data.metric;
 
 public class FunctionSymbol extends javaff.data.strips.PredicateSymbol
 {
-	public FunctionSymbol(String name)
+	public FunctionSymbol(String name, boolean domainDefined)
     {
-		super(name);
+		super(name, domainDefined);
 	}
 }

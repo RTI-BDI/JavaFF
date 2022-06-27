@@ -30,6 +30,7 @@ package javaff.data.strips;
 
 import javaff.data.PDDLPrinter;
 import javaff.data.PDDLPrintable;
+import javaff.data.Parameter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
@@ -38,20 +39,39 @@ import java.io.PrintStream;
 public class PredicateSymbol implements PDDLPrintable
 {
 	protected String name;
-	protected boolean staticValue;
+	protected boolean staticValue;	
+	// is it an internal self-made proposition to support the search (such as action "a" ended, e.g. "ga") 
+	// or a valid predicate defined within the PDDL domain
+	private boolean domainDefined;
 
-	protected List params = new ArrayList(); //The parameters (types) that this predicate symbol takes
+	protected ArrayList<Parameter> params = new ArrayList<>(); //The parameters (types) that this predicate symbol takes
 
 	protected PredicateSymbol()
 	{
 		
 	}
 
-	public PredicateSymbol(String pName)
+	public PredicateSymbol(String pName, boolean domainDefined)
 	{
 		name = pName;
+		this.domainDefined = domainDefined;
 	}
 
+	public boolean isDomainDefined(){return domainDefined;}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public ArrayList<String> getParams()
+	{
+		ArrayList<String> parameters = new ArrayList<String>();
+		for(Parameter param : params)
+			parameters.add(param.getName());
+		return parameters;
+	}
+	
 	public String toString()
 	{
 		return name;

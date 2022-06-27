@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Hashtable;
+import java.util.HashSet;
 import java.util.StringTokenizer;  
 
 
@@ -16,6 +17,7 @@ import javaff.JavaFF;
 import javaff.data.GroundProblem;
 import javaff.planning.State;
 import javaff.planning.TemporalMetricState;
+import javaff.data.strips.Proposition;
 
 import plansys2_msgs.msg.Plan;
 import plansys2_msgs.msg.PlanItem;
@@ -77,14 +79,81 @@ class SearchThread extends Thread{
     return psys2Plan;
   }
 
+  ArrayList<ros2_bdi_interfaces.msg.Belief> getTrueBeliefs(TemporalMetricState state)
+  {
+    ArrayList<ros2_bdi_interfaces.msg.Belief> beliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
+    for(Proposition p : ((HashSet<Proposition>)state.facts))
+      if(p.isDomainDefined())
+      {
+        ros2_bdi_interfaces.msg.Belief belief = new ros2_bdi_interfaces.msg.Belief();
+        belief.setName(p.getName());
+        belief.setPddlType(belief.PREDICATE_TYPE);
+        belief.setParams(p.getStringParameters());
+        beliefs.add(belief);
+      }
+    
+    return beliefs;
+  }
+
+  ros2_bdi_interfaces.msg.ConditionsDNF getCurrentStatePreconditions(TemporalMetricState state)
+  {
+    ros2_bdi_interfaces.msg.ConditionsDNF preconditions = new ros2_bdi_interfaces.msg.ConditionsDNF();
+    ArrayList<ros2_bdi_interfaces.msg.ConditionsConjunction> clauses = new ArrayList<ros2_bdi_interfaces.msg.ConditionsConjunction>();
+    ros2_bdi_interfaces.msg.ConditionsConjunction clause = new ros2_bdi_interfaces.msg.ConditionsConjunction();
+    ArrayList<ros2_bdi_interfaces.msg.Condition> literals = new ArrayList<ros2_bdi_interfaces.msg.Condition>();
+    
+    ArrayList<ros2_bdi_interfaces.msg.Belief> trueBeliefs = getTrueBeliefs(state);
+    for(ros2_bdi_interfaces.msg.Belief belief : trueBeliefs)
+    {
+      ros2_bdi_interfaces.msg.Condition condition = new ros2_bdi_interfaces.msg.Condition();
+      condition.setConditionToCheck(belief);
+      condition.setCheck(condition.TRUE_CHECK);
+      literals.add(condition);
+    }
+    clause.setLiterals(literals);
+    clauses.add(clause);
+    preconditions.setClauses(clauses);
+
+    return preconditions;
+  }
+
+  private ros2_bdi_interfaces.msg.Desire buildTarget(
+      int searchIteration,
+      ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions,
+      TemporalMetricState targetState,
+      ros2_bdi_interfaces.msg.Desire fulfillingDesire,
+      float planDeadline){
+
+    ros2_bdi_interfaces.msg.Desire target = new ros2_bdi_interfaces.msg.Desire(); 
+    
+    // name = fulfillingDesire name concat. to reached search iteration
+    target.setName(fulfillingDesire.getName() + searchIteration);
+
+    //retrieve preconditions
+    target.setPrecondition(planPreconditions);
+
+    //retrieve goal value
+    target.setValue(getTrueBeliefs(targetState));
+
+    // set priority and deadline
+    target.setPriority(fulfillingDesire.getPriority());
+    target.setDeadline(planDeadline);
+    
+    return target;
+  }
+
   /*
-   * Check diff between old javaff_interfaces.msg.PartialPlans msg and newly instantiated plansys2_msgs.msg.Plan msg received from the search
-   * to produce a new array of partial plans. In the general case, the append of the new plan will suffice, but when a completely new path has been computed,
-   * old published paths that are still not executed might need to be replaced
+   * Create a msg with newly computed plan (to be updated back again to contain all partially computed plan in the search from the global initial and the global target)
   */
-  private javaff_interfaces.msg.PartialPlans buildNewPartialPlansMsg(javaff_interfaces.msg.PartialPlans oldPartialPlansMsg, plansys2_msgs.msg.Plan currentPlanMsg){
-    float maxStartTime = -1.0F;
-    plansys2_msgs.msg.Plan newPPlan = new plansys2_msgs.msg.Plan();
+  private javaff_interfaces.msg.PartialPlans buildNewPartialPlansMsg(
+    int searchIteration,
+    ros2_bdi_interfaces.msg.Desire fulfillingDesire,
+    ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions, 
+    TemporalMetricState currentState, 
+    plansys2_msgs.msg.Plan currentPlanMsg){
+    
+    float maxEndTime = -1.0F;
+    javaff_interfaces.msg.PartialPlan newPPlan = new javaff_interfaces.msg.PartialPlan();
     ArrayList<plansys2_msgs.msg.PlanItem> newItems = new ArrayList<plansys2_msgs.msg.PlanItem>();
     
     // Iterate over old partial plans, determining highest start time so that it can be used as a lower bound after to identify the newly computed actions
@@ -95,11 +164,15 @@ class SearchThread extends Thread{
     
     // Iterate for new items to compose a partial plan
     for(plansys2_msgs.msg.PlanItem newItem : currentPlanMsg.getItems())
-      if(newItem.getTime() > maxStartTime)
-        newItems.add(newItem);
-    
+    {  
+      newItems.add(newItem);
+      if(newItem.getTime() + newItem.getDuration() > maxEndTime)
+        maxEndTime = newItem.getTime() + newItem.getDuration();//new plan deadline
+    }
+
     if(!newItems.isEmpty()){//found some new item, i.e. a new partial plan to be executed will be added
-      newPPlan.setItems(newItems);
+      newPPlan.getPlan().setItems(newItems);
+      newPPlan.setTarget(buildTarget(searchIteration, planPreconditions, currentState, fulfillingDesire, maxEndTime));
       //oldPartialPlansMsg.getPlans().add(newPPlan);
     }
 
@@ -124,7 +197,10 @@ class SearchThread extends Thread{
       //System.out.println("\n\n ROUND " + (i++));
       this.sharedSearchData.searchLock.lock();
 
-        // move forward with the search for 500ms
+        // retrieve preconditions from currentState that are going to apply for found plan
+        ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = getCurrentStatePreconditions(this.sharedSearchData.currentState);
+
+        // move forward with the search for interval search time
         this.sharedSearchData.currentState = (TemporalMetricState) JavaFF.performFFSearch(this.sharedSearchData.currentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
 
         //check whether unsat ~ empty open and search has return null
@@ -140,7 +216,8 @@ class SearchThread extends Thread{
           
           if(currentPlanMsg.getItems().size() > 0)
           {
-            this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg(this.sharedSearchData.partialPlansMsg, currentPlanMsg);
+            this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg( i, this.sharedSearchData.fulfillingDesire,
+              planPreconditions, this.sharedSearchData.currentState, currentPlanMsg);
             
             this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
 
@@ -158,6 +235,7 @@ class SearchThread extends Thread{
       if(killMySelf)//if true mspawner thread has set it, put it again to false and terminate your execution
         return;
 
+      i++;
     }
   }
 
@@ -166,6 +244,8 @@ class SearchThread extends Thread{
 class SharedSearchData{
   GroundProblem groundProblem;
   TemporalMetricState currentState;
+
+  ros2_bdi_interfaces.msg.Desire fulfillingDesire;
 
   javaff_interfaces.msg.PartialPlans partialPlansMsg = new javaff_interfaces.msg.PartialPlans();
   
@@ -201,7 +281,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, name + "/plan");
     } 
 
-    public OperationResult startSearch(String problem, int intervalSearchMS){
+    public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, int intervalSearchMS){
       OperationResult returnObj = new OperationResult(false, "Search for a plan has not been started");
       
       try{
@@ -216,7 +296,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         }catch(NullPointerException ne){}//handle first call in which thread has not been started yet or no one is running
 
         // START NEW SEARCH
-
+        this.sharedSearchData.fulfillingDesire = fulfillingDesire;
         // init again shared structures for search and partial plans composition (groundProblem and initial TMS are going to be computed just below)
         this.sharedSearchData.partialPlansMsg = new javaff_interfaces.msg.PartialPlans();
         this.sharedSearchData.open = new LinkedList<>();

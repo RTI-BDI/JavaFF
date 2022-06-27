@@ -70,7 +70,7 @@ public class ROS2JavaFFServer extends BaseComposableNode{
         //TODO remove print, just for debugging
         System.out.println("PROBLEM: " + request.getProblem());
 
-        OperationResult startSearchStatus = searchNode.startSearch(request.getProblem(), request.getSearchInterval());
+        OperationResult startSearchStatus = searchNode.startSearch(request.getFulfillingDesire(), request.getProblem(), request.getSearchInterval());
 
         //TODO get meaningful boolean from previous call
         response.setAccepted(startSearchStatus.result);

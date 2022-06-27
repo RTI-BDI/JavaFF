@@ -398,7 +398,7 @@ public class PDDL21parser implements PDDL21parserConstants {
                 PredicateSymbol ps = (PredicateSymbol) UP.predSymbolMap.get(t.toString());
                 if (ps == null)
                 {
-                        ps = new PredicateSymbol(t.toString());
+                        ps = new PredicateSymbol(t.toString(), true);
                         UP.predSymbolMap.put(t.toString(), ps);
                 }
                 {if (true) return ps;}
@@ -650,7 +650,7 @@ public class PDDL21parser implements PDDL21parserConstants {
                 FunctionSymbol fs = (FunctionSymbol) UP.funcSymbolMap.get(t.toString());
                 if (fs == null)
                 {
-                        fs = new FunctionSymbol(t.toString());
+                        fs = new FunctionSymbol(t.toString(), true);
                         UP. funcSymbolMap.put(t.toString(), fs);
                 }
                 {if (true) return fs;}

@@ -118,12 +118,12 @@ public class UngroundDurativeAction extends Operator
 	
 	 public void makeInstants()
 	{
-		 PredicateSymbol ps = new PredicateSymbol("i"+name);
+		 PredicateSymbol ps = new PredicateSymbol("i"+name, false);
 		 Predicate j = new Predicate(ps);
 		 j.addParameters(params);
 		 dummyJoin = j;
 
-		 PredicateSymbol ps2 = new PredicateSymbol("g"+name);
+		 PredicateSymbol ps2 = new PredicateSymbol("g"+name, false);
 		 Predicate g = new Predicate(ps2);
 		 g.addParameters(params);
 		 dummyGoal = g;

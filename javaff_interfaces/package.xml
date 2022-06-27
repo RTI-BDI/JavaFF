@@ -11,6 +11,7 @@
   <buildtool_depend>rcljava_common</buildtool_depend>
 
   <depend>plansys2_msgs</depend>
+  <depend>ros2_bdi_interfaces</depend>
 
   <build_depend>rosidl_default_generators</build_depend>
   <build_export_depend>rosidl_generator_java</build_export_depend>

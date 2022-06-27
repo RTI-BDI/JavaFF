@@ -11,6 +11,7 @@ find_package(builtin_interfaces REQUIRED)
 find_package(rcl_interfaces REQUIRED)
 find_package(rcljava_common REQUIRED)
 find_package(plansys2_msgs REQUIRED)
+find_package(ros2_bdi_interfaces REQUIRED)
 
 rosidl_generator_java_get_typesupports(_java_type_supports)
 
@@ -19,6 +20,7 @@ rosidl_generate_interfaces( ${PROJECT_NAME}
   "msg/PlanItemExecStatus.msg"
   "msg/PartialPlanExecStatus.msg"
   "msg/PartialPlansExecStatus.msg"
+  "msg/PartialPlan.msg"
   "msg/PartialPlans.msg"
 
   "srv/UnexpectedState.srv"
@@ -28,6 +30,7 @@ rosidl_generate_interfaces( ${PROJECT_NAME}
   rcl_interfaces
   ${_java_type_supports}
   plansys2_msgs
+  ros2_bdi_interfaces
   #SKIP_INSTALL
 )
 

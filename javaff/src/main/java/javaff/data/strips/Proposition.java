@@ -34,6 +34,7 @@ import javaff.data.GroundEffect;
 import javaff.planning.State;
 import javaff.planning.STRIPSState;
 import java.util.Set;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 
@@ -43,6 +44,13 @@ public class Proposition extends javaff.data.Literal implements GroundCondition,
     {
 		name = p;
     }
+	
+	public String getName()
+	{
+		return name.getName();
+	}
+
+	public boolean isDomainDefined(){return name.isDomainDefined();}
 	
 	public boolean isTrue(State s) // returns whether this conditions is true is State S
     {

@@ -94,7 +94,8 @@ public class JavaFF
 					" \tr_a r_b r_c r_d r_e r_f - room\n" +
 					" \th11 h12 h13 h21 h22 h23 h31 h32 h33 h11_21 h13_23 h21_31 h23_33 - hallway_segment\n" +
 					" \td0 d1 d2 d3 - dock\n" +
-					" \tr1 r2 r3 - robot\n" +
+					//" \tr1 r3 - robot\n" +
+					" \tr2 - robot\n" +
 					" \tp1 p2 - printer\n" +
 					" )\n" +
 					" ( :init\n" +
@@ -164,15 +165,15 @@ public class JavaFF
 					" \t( d_in d1 r_c )\n" +
 					" \t( d_in d2 r_c )\n" +
 					" \t( d_in d3 r_c )\n" +
-					" \t( r_in r1 r_d )\n" +
-					" \t( active r1 )\n" +
-					" \t( not_r_docked r1 )\n" +
+					//" \t( r_in r1 r_d )\n" +
+					//" \t( active r1 )\n" +
+					//" \t( not_r_docked r1 )\n" +
 					" \t( r_in r2 r_c )\n" +
 					" \t( active r2 )\n" +
 					" \t( r_docked r2 )\n" +
-					" \t( r_in r3 r_c )\n" +
-					" \t( active r3 )\n" +
-					" \t( r_docked r3 )\n" +
+					//" \t( r_in r3 r_c )\n" +
+					//" \t( active r3 )\n" +
+					//" \t( r_docked r3 )\n" +
 					" )\n" +
 					" ( :goal \n" +
 											"( and " +

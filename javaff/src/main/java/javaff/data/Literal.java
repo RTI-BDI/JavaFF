@@ -37,7 +37,7 @@ import java.io.PrintStream;
 public abstract class Literal implements Condition, Effect
 {
 	protected PredicateSymbol name;
-    protected List parameters = new ArrayList(); // list of Parameters
+    protected List parameters = new ArrayList<Parameter>(); // list of Parameters
 
 	public void setPredicateSymbol(PredicateSymbol n)
 	{
@@ -52,6 +52,13 @@ public abstract class Literal implements Condition, Effect
 	public List getParameters()
 	{
 		return parameters;
+	}
+
+	public ArrayList<String> getStringParameters() {
+		ArrayList<String> params = new ArrayList<>();
+		for(Parameter p : (ArrayList<Parameter>) parameters)
+			params.add(p.getName());
+		return params;
 	}
 
 	public void addParameter(Parameter p)
