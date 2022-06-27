@@ -88,10 +88,10 @@ class SearchThread extends Thread{
     ArrayList<plansys2_msgs.msg.PlanItem> newItems = new ArrayList<plansys2_msgs.msg.PlanItem>();
     
     // Iterate over old partial plans, determining highest start time so that it can be used as a lower bound after to identify the newly computed actions
-    for(plansys2_msgs.msg.Plan oldPlan : oldPartialPlansMsg.getPlans())
-      for(plansys2_msgs.msg.PlanItem oldItem : oldPlan.getItems())
-        if(oldItem.getTime() > maxStartTime)
-          maxStartTime = oldItem.getTime();
+    // for(plansys2_msgs.msg.Plan oldPlan : oldPartialPlansMsg.getPlans())
+    //   for(plansys2_msgs.msg.PlanItem oldItem : oldPlan.getItems())
+    //     if(oldItem.getTime() > maxStartTime)
+    //       maxStartTime = oldItem.getTime();
     
     // Iterate for new items to compose a partial plan
     for(plansys2_msgs.msg.PlanItem newItem : currentPlanMsg.getItems())
@@ -100,10 +100,15 @@ class SearchThread extends Thread{
     
     if(!newItems.isEmpty()){//found some new item, i.e. a new partial plan to be executed will be added
       newPPlan.setItems(newItems);
-      oldPartialPlansMsg.getPlans().add(newPPlan);
+      //oldPartialPlansMsg.getPlans().add(newPPlan);
     }
 
-    return oldPartialPlansMsg;
+    // return oldPartialPlansMsg;
+
+    javaff_interfaces.msg.PartialPlans pplans = new javaff_interfaces.msg.PartialPlans();
+    pplans.getPlans().add(newPPlan);
+
+    return pplans;
   }
 
   public void killMySelf(){killMySelf = true;}
@@ -133,9 +138,16 @@ class SearchThread extends Thread{
           // build plan msg and publish it
           plansys2_msgs.msg.Plan currentPlanMsg = buildPsys2Plan(planString);
           
-          this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg(this.sharedSearchData.partialPlansMsg, currentPlanMsg);
-          
-          this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
+          if(currentPlanMsg.getItems().size() > 0)
+          {
+            this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg(this.sharedSearchData.partialPlansMsg, currentPlanMsg);
+            
+            this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
+
+            JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
+            this.sharedSearchData.open = new LinkedList<>();
+            this.sharedSearchData.closed = new Hashtable<>();
+          }
         
         }else{
           //TODO define and implement how to behave here!!! idea: could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  

@@ -123,6 +123,11 @@ public class STRIPSState extends State implements Cloneable
 		return actions;
 	}
 
+	public void cleanPlanInfo(){
+		RPCalculated = false;
+		plan = new TotalOrderPlan();
+	}
+
 	public void calculateRP()
 	{
 		if (!RPCalculated)

@@ -39,10 +39,13 @@ import java.math.BigDecimal;
 public class EnforcedHillClimbingSearch extends Search
 {
 	protected BigDecimal bestHValue;
+	protected BigDecimal bestHValueNoOpenAction;
 
 	protected Hashtable<Integer, State> closed;
 	protected LinkedList<State> open;
 	protected Filter filter = null;
+
+	protected State bestIntermediateState;
 
 	protected float searchIntervalMs = 1000.0F;
 
@@ -68,6 +71,7 @@ public class EnforcedHillClimbingSearch extends Search
 	public EnforcedHillClimbingSearch(State s, Comparator c)
 	{
 		super(s);
+		this.bestIntermediateState = s;
 		setComparator(c);
 
 		closed = new Hashtable<>();
@@ -106,6 +110,7 @@ public class EnforcedHillClimbingSearch extends Search
 		startSearchTime = System.currentTimeMillis();
 		open.add(start); // add it to the open list
 		bestHValue = start.getHValue(); // and take its heuristic value as the best so far
+		bestHValueNoOpenAction = start.getHValue(); // best heuristic value so far for states with NO open action
 
 		javaff.JavaFF.infoOutput.println(bestHValue);
 
@@ -118,19 +123,26 @@ public class EnforcedHillClimbingSearch extends Search
 			for (State succ : successors) {
 
 				if (needToVisit(succ)) {
-					if (succ.goalReached()) { // if we've found a goal state - return it as the solution
-						return succ;
+					TemporalMetricState tms = (TemporalMetricState) succ;
+					if(tms.openActions.isEmpty() && tms.getHValue().compareTo(bestHValueNoOpenAction) < 0)//update bestHValueNoOpenAction
+					{
+						bestHValueNoOpenAction = tms.getHValue();
+						bestIntermediateState = tms;
+					}
 
-					} else if (succ.getHValue().compareTo(bestHValue) < 0) {
+					if (tms.goalReached()) { // if we've found a goal state - return it as the solution
+						return tms;
+
+					} else if (tms.getHValue().compareTo(bestHValue) < 0) {
 						// if we've found a state with a better heuristic value than the best seen so far
-						bestHValue = succ.getHValue(); // note the new best value
+						bestHValue = tms.getHValue(); // note the new best value
 						javaff.JavaFF.infoOutput.println(bestHValue);
 						open.clear(); // clear the open list
-						open.add(succ); // put this on it
+						open.add(tms); // put this on it
 						break; // and skip looking at the other successors
 
 					} else {
-						open.add(succ); // otherwise, add to the open list
+						open.add(tms); // otherwise, add to the open list
 					}
 				}
 			}
@@ -139,24 +151,7 @@ public class EnforcedHillClimbingSearch extends Search
 		if(open.isEmpty())// no reason to move forward: unsat with EHC //TODO make sure this is right: think about it more
 			return null;
 
-		// pick the state having bestHValue and return that plan
-		Enumeration<Integer> e = this.closed.keys();
-		while (e.hasMoreElements()) {
-			int key = e.nextElement();
-			State s = (State) closed.get(key);
-			if (s.getHValue().compareTo(bestHValue) == 0) {
-				return s;
-				/*
-				//TODO ask MR if it's better to have it here instead of JavaFF.search
-				if(s instanceof TemporalMetricState)
-				{
-					for(DurativeAction da : ((Set<DurativeAction>) ((TemporalMetricState) s).openActions))
-						s = ((TemporalMetricState)s).apply(da.endAction);
-				}
-				return s;
-				 */
-			}
-		}
-		return null;
+		// pick the state having bestHValueNoOpenAction and return that plan
+		return bestIntermediateState;
 	}
 }
