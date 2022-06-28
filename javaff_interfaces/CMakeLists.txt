@@ -21,7 +21,7 @@ rosidl_generate_interfaces( ${PROJECT_NAME}
   "msg/PartialPlanExecStatus.msg"
   "msg/PartialPlansExecStatus.msg"
   "msg/PartialPlan.msg"
-  "msg/PartialPlans.msg"
+  "msg/SearchResult.msg"
 
   "srv/UnexpectedState.srv"
   "srv/JavaFFPlan.srv"

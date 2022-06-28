@@ -26,9 +26,9 @@ class SearchThread extends Thread{
 
   private boolean killMySelf = false;
   private SharedSearchData sharedSearchData;
-  private Publisher<javaff_interfaces.msg.PartialPlans> planPublisher;
+  private Publisher<javaff_interfaces.msg.SearchResult> planPublisher;
 
-  public SearchThread(SharedSearchData sharedSearchData, Publisher<javaff_interfaces.msg.PartialPlans> planPublisher){
+  public SearchThread(SharedSearchData sharedSearchData, Publisher<javaff_interfaces.msg.SearchResult> planPublisher){
     super();
     this.sharedSearchData = sharedSearchData;
     this.planPublisher = planPublisher;
@@ -145,8 +145,9 @@ class SearchThread extends Thread{
   /*
    * Create a msg with newly computed plan (to be updated back again to contain all partially computed plan in the search from the global initial and the global target)
   */
-  private javaff_interfaces.msg.PartialPlans buildNewPartialPlansMsg(
+  private javaff_interfaces.msg.SearchResult buildNewSearchResultMsg(
     int searchIteration,
+    boolean goalReached,
     ros2_bdi_interfaces.msg.Desire fulfillingDesire,
     ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions, 
     TemporalMetricState currentState, 
@@ -178,10 +179,20 @@ class SearchThread extends Thread{
 
     // return oldPartialPlansMsg;
 
-    javaff_interfaces.msg.PartialPlans pplans = new javaff_interfaces.msg.PartialPlans();
-    pplans.getPlans().add(newPPlan);
+    javaff_interfaces.msg.SearchResult searchResult = new javaff_interfaces.msg.SearchResult();
+    searchResult.getPlans().add(newPPlan);
+    searchResult.setStatus(goalReached? searchResult.SUCCESS : searchResult.SEARCHING);
 
-    return pplans;
+    return searchResult;
+  }
+
+  /*
+   * Create a special msg when we meet an unexpected state PPlans[Plan[ PlanItem{-1, "", -1} ]]
+  */
+  private javaff_interfaces.msg.SearchResult buildUnsatSearchResult(){
+    javaff_interfaces.msg.SearchResult searchResult = new javaff_interfaces.msg.SearchResult();
+    searchResult.setStatus(searchResult.FAILED);
+    return searchResult;
   }
 
   public void killMySelf(){killMySelf = true;}
@@ -216,18 +227,17 @@ class SearchThread extends Thread{
           
           if(currentPlanMsg.getItems().size() > 0)
           {
-            this.sharedSearchData.partialPlansMsg = buildNewPartialPlansMsg( i, this.sharedSearchData.fulfillingDesire,
+            this.sharedSearchData.searchResultMsg = buildNewSearchResultMsg(i,this.sharedSearchData.currentState.goalReached(), this.sharedSearchData.fulfillingDesire,
               planPreconditions, this.sharedSearchData.currentState, currentPlanMsg);
             
-            this.planPublisher.publish(this.sharedSearchData.partialPlansMsg);
-
+            if(!killMySelf)//these search results are still valid
+              this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
+            
             JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
             this.sharedSearchData.open = new LinkedList<>();
             this.sharedSearchData.closed = new Hashtable<>();
           }
         
-        }else{
-          //TODO define and implement how to behave here!!! idea: could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  
         }
         
 
@@ -236,6 +246,11 @@ class SearchThread extends Thread{
         return;
 
       i++;
+    }
+
+    if(unsat){
+      //could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  
+      this.planPublisher.publish(buildUnsatSearchResult());
     }
   }
 
@@ -247,7 +262,7 @@ class SharedSearchData{
 
   ros2_bdi_interfaces.msg.Desire fulfillingDesire;
 
-  javaff_interfaces.msg.PartialPlans partialPlansMsg = new javaff_interfaces.msg.PartialPlans();
+  javaff_interfaces.msg.SearchResult searchResultMsg = new javaff_interfaces.msg.SearchResult();
   
   LinkedList<State> open = new LinkedList<>();
   Hashtable<Integer, State> closed = new Hashtable<>();
@@ -265,7 +280,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private SharedSearchData sharedSearchData;
 
-    private Publisher<javaff_interfaces.msg.PartialPlans> planPublisher;
+    private Publisher<javaff_interfaces.msg.SearchResult> planPublisher;
 
     private String domain;
 
@@ -278,7 +293,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.domain = domain;
 
       this.sharedSearchData = new SharedSearchData();
-      this.planPublisher = this.node.<javaff_interfaces.msg.PartialPlans>createPublisher(javaff_interfaces.msg.PartialPlans.class, name + "/plan");
+      this.planPublisher = this.node.<javaff_interfaces.msg.SearchResult>createPublisher(javaff_interfaces.msg.SearchResult.class, name + "/plan");
     } 
 
     public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, int intervalSearchMS){
@@ -298,7 +313,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         // START NEW SEARCH
         this.sharedSearchData.fulfillingDesire = fulfillingDesire;
         // init again shared structures for search and partial plans composition (groundProblem and initial TMS are going to be computed just below)
-        this.sharedSearchData.partialPlansMsg = new javaff_interfaces.msg.PartialPlans();
+        this.sharedSearchData.searchResultMsg = new javaff_interfaces.msg.SearchResult();
         this.sharedSearchData.open = new LinkedList<>();
         this.sharedSearchData.closed = new Hashtable<>();
         // parse domain and problem, unground + ground processes, returning the initial state
