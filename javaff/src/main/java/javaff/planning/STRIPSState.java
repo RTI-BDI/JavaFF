@@ -118,6 +118,7 @@ public class STRIPSState extends State implements Cloneable
 		return facts.contains(p);
 	}
 
+	public boolean isRPCalculated(){return RPCalculated;}
 	public Set getActions()
 	{
 		return actions;

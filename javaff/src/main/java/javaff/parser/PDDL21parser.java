@@ -30,6 +30,7 @@ public class PDDL21parser implements PDDL21parserConstants {
 
     public static UngroundProblem parseDomainAndProblem(String domain, String problem)
     {
+                UP = new UngroundProblem();
                 boolean probsuc = false;
                 boolean suc = parseDomain(domain);
                 if (suc) probsuc = parseProblem(problem);

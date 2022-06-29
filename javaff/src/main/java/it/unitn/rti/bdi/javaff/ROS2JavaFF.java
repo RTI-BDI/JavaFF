@@ -13,22 +13,22 @@ import org.ros2.rcljava.executors.MultiThreadedExecutor;
 
 public class ROS2JavaFF{
 
-  private static String retrieveDomainFilepath(final String[] args){
-    String fp = "";
+  private static String retrieveArgument(final String[] args, final String delimiter, final int delimiterCount){
+    String arg = "";
 
     int encounteredSubseqQuestionMarks = 0;
     boolean reading = false;
-    for(int i=0; i<args.length && (reading || fp.length() == 0); i++)
+    for(int i=0; i<args.length && (reading || arg.length() == 0); i++)
     { 
-      // check whenever ??? is encountered
-      while(i<args.length && args[i].equals("?"))
+      // check whenever delimiter is encountered
+      while(i<args.length && args[i].equals(delimiter))
       {
         encounteredSubseqQuestionMarks++;
         i++;
       }
       
-      // encountered ???, i.e. start or ending reading phase
-      if(encounteredSubseqQuestionMarks == 3)
+      // encountered delimiter requested number of times, i.e. start or ending reading phase
+      if(encounteredSubseqQuestionMarks == delimiterCount)
       {  
         reading = !reading;
         encounteredSubseqQuestionMarks = 0;
@@ -36,11 +36,20 @@ public class ROS2JavaFF{
       
       // if reading, concat 
       if(reading)
-        fp = fp.concat(args[i]);
+        arg = arg.concat(args[i]);
     }
 
-    return fp;
+    return arg;
 
+  }
+
+  private static String retrieveDomainFilepath(final String[] args){
+      return retrieveArgument(args, "?", 3);
+  }
+
+  private static boolean retrieveDebug(final String[] args){
+    String debug = retrieveArgument(args, "!", 3);
+    return debug.equalsIgnoreCase("debug=True");
   }
 
   private static String readFile(String filepath) throws FileNotFoundException {
@@ -56,7 +65,10 @@ public class ROS2JavaFF{
     return data;
   }
 
-  public static void main(final String[] args) throws Exception {
+  public static void main(final String[] args) throws Exception {   
+    // for(String a : args)
+    //   System.out.println(a);
+
     //retrieve namespace from cli args[]
     String ns = String.join("", args);
     ns = ns.substring(ns.lastIndexOf("ns:=/") + "ns:=/".length());
@@ -64,6 +76,8 @@ public class ROS2JavaFF{
     String domainFilepath = retrieveDomainFilepath(args);
     System.out.println("Reading domain file from \"" + domainFilepath + "\"");
     String domain = readFile(domainFilepath);
+    boolean debugActive = retrieveDebug(args);
+    System.out.println("Debug active = \"" + debugActive + "\"");
 
     //System.out.println("Loaded domain file: \"" + domain + "\"");
 
@@ -73,7 +87,7 @@ public class ROS2JavaFF{
     MultiThreadedExecutor exec = new MultiThreadedExecutor(2);
     
     ROS2JavaFFServer javaffServerNode = new ROS2JavaFFServer("javaff_server", ns);
-    ROS2JavaFFSearch javaffSearchNode = new ROS2JavaFFSearch("javaff_search", ns, domain);
+    ROS2JavaFFSearch javaffSearchNode = new ROS2JavaFFSearch("javaff_search", ns, domain, debugActive);
 
     javaffSearchNode.setServerNode(javaffServerNode);
     javaffServerNode.setSearchNode(javaffSearchNode);

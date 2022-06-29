@@ -34,6 +34,7 @@ import javaff.data.GroundProblem;
 import javaff.data.Plan;
 import javaff.data.TotalOrderPlan;
 import javaff.data.TimeStampedPlan;
+import javaff.data.strips.Proposition;
 import javaff.data.temporal.DurativeAction;
 import javaff.parser.PDDL21parser;
 import javaff.planning.State;
@@ -88,13 +89,12 @@ public class JavaFF
 			     e.printStackTrace();
 			}
 
-			String problem = " ( define ( problem problem_1 )\n" +
+			String problem = "( define ( problem problem_1 )\n" +
 					" ( :domain printing-domain )\n" +
 					" ( :objects\n" +
 					" \tr_a r_b r_c r_d r_e r_f - room\n" +
 					" \th11 h12 h13 h21 h22 h23 h31 h32 h33 h11_21 h13_23 h21_31 h23_33 - hallway_segment\n" +
 					" \td0 d1 d2 d3 - dock\n" +
-					//" \tr1 r3 - robot\n" +
 					" \tr2 - robot\n" +
 					" \tp1 p2 - printer\n" +
 					" )\n" +
@@ -160,27 +160,21 @@ public class JavaFF
 					" \t( free h33 )\n" +
 					" \t( p_in p1 h12 )\n" +
 					" \t( p_in p2 h32 )\n" +
-					" \t( available p1 )\n" +
 					" \t( d_in d0 r_c )\n" +
 					" \t( d_in d1 r_c )\n" +
 					" \t( d_in d2 r_c )\n" +
 					" \t( d_in d3 r_c )\n" +
-					//" \t( r_in r1 r_d )\n" +
-					//" \t( active r1 )\n" +
-					//" \t( not_r_docked r1 )\n" +
-					" \t( r_in r2 r_c )\n" +
 					" \t( active r2 )\n" +
-					" \t( r_docked r2 )\n" +
-					//" \t( r_in r3 r_c )\n" +
-					//" \t( active r3 )\n" +
-					//" \t( r_docked r3 )\n" +
+					" \t( not_r_docked r2 )\n" +
+					" \t( available p2 )\n" +
+					" \t( r_in r2 h12 )\n" +
 					" )\n" +
-					" ( :goal \n" +
-											"( and " +
-												"(printed_docs_left_in r2 r_e) " +
-											") " +
-										") " +
-					")";
+					" ( :goal\n" +
+					" \t( and\n" +
+					" \t\t( printed_docs_left_in r2 r_e )\n" +
+					" \t)\n" +
+					" )\n" +
+					" )";
 			boolean errorProblem = false;
 
 			//try {
@@ -202,6 +196,10 @@ public class JavaFF
 				GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
 				if(groundProblem != null)
 				{
+					System.out.println("\n[1]Ground problem info:");
+					System.out.println("facts: " + groundProblem.initial.size());
+					for(Proposition f : (HashSet<Proposition>)groundProblem.initial)
+						System.out.println("\t"+f.getName() + ", params = " + f.getStringParameters().toString());
 					TemporalMetricState currentState = JavaFF.computeInitialState(groundProblem);
 					boolean unsat = false;
 					LinkedList<State> open = new LinkedList<>();
@@ -252,7 +250,6 @@ public class JavaFF
 		// Parse and Ground the Problem
 		// ********************************
 		// long startTime = System.currentTimeMillis();
-
 		UngroundProblem unground = PDDL21parser.parseDomainAndProblem(domain, problem);
 
 		if (unground == null)
@@ -263,7 +260,8 @@ public class JavaFF
 
 
 		//PDDLPrinter.printDomainFile(unground, System.out);
-		//PDDLPrinter.printProblemFile(unground, System.out);
+		System.out.println("\n\n\nAOOO");
+		PDDLPrinter.printProblemFile(unground, System.out);
 
 		GroundProblem ground = unground.ground();
 

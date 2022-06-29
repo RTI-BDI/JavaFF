@@ -67,12 +67,10 @@ public class ROS2JavaFFServer extends BaseComposableNode{
     public void handlePlanService(final RMWRequestId header,
         final javaff_interfaces.srv.JavaFFPlan_Request request,
         final javaff_interfaces.srv.JavaFFPlan_Response response){
-        //TODO remove print, just for debugging
-        System.out.println("PROBLEM: " + request.getProblem());
 
         OperationResult startSearchStatus = searchNode.startSearch(request.getFulfillingDesire(), request.getProblem(), request.getSearchInterval());
 
-        //TODO get meaningful boolean from previous call
+        //get meaningful boolean from previous call
         response.setAccepted(startSearchStatus.result);
         response.setMsg(startSearchStatus.msg);
         
@@ -81,8 +79,10 @@ public class ROS2JavaFFServer extends BaseComposableNode{
     public void handleUnexpectedStateService(final RMWRequestId header,
         final javaff_interfaces.srv.UnexpectedState_Request request,
         final javaff_interfaces.srv.UnexpectedState_Response response){
-            searchNode.unexpectedState(request.getState());
+            //System.out.println("Unexpected state service has been called; provided state: " + request.getPddlProblem());
+            OperationResult unexpectedStateStatus = searchNode.unexpectedState(request.getPddlProblem());
             //TODO get meaningful boolean from previous call
-            response.setHandled(true);
+            
+            response.setHandled(unexpectedStateStatus.result);
     }
 }
