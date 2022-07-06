@@ -36,5 +36,5 @@ public interface Plan extends Cloneable
 {
 	public abstract void print(PrintStream p);
 	public abstract void print(PrintWriter p);
-	public abstract Set getActions();
+	public abstract Set<Action> getActions();
 }

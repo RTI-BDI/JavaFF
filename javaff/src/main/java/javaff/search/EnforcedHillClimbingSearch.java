@@ -42,7 +42,7 @@ public class EnforcedHillClimbingSearch extends Search
 	protected BigDecimal bestHValueNoOpenAction;
 
 	protected Hashtable<Integer, State> closed;
-	protected LinkedList<State> open;
+	protected TreeSet<State> open;
 	protected Filter filter = null;
 
 	protected State bestIntermediateState;
@@ -60,7 +60,7 @@ public class EnforcedHillClimbingSearch extends Search
 		this.searchIntervalMs = searchIntervalMs;
 	}
 
-	public EnforcedHillClimbingSearch(State s, float searchIntervalMs, LinkedList<State> open, Hashtable<Integer, State> closed)
+	public EnforcedHillClimbingSearch(State s, float searchIntervalMs, TreeSet<State> open, Hashtable<Integer, State> closed)
 	{
 		this(s, new HValueComparator());
 		this.searchIntervalMs = searchIntervalMs;
@@ -75,7 +75,7 @@ public class EnforcedHillClimbingSearch extends Search
 		setComparator(c);
 
 		closed = new Hashtable<>();
-		open = new LinkedList<>();
+		open = new TreeSet<>();
 	}
 
 	public void setFilter(Filter f)
@@ -85,8 +85,10 @@ public class EnforcedHillClimbingSearch extends Search
 
 	public State removeNext()
 	{
+		State S = (State) ((TreeSet) open).first();
+		open.remove(S);
 
-		return open.removeFirst();
+		return S;
 	}
 
 	public boolean needToVisit(State s) {
@@ -111,6 +113,7 @@ public class EnforcedHillClimbingSearch extends Search
 		open.add(start); // add it to the open list
 		bestHValue = start.getHValue(); // and take its heuristic value as the best so far
 		bestHValueNoOpenAction = start.getHValue(); // best heuristic value so far for states with NO open action
+		bestIntermediateState = start; // best intermediate state at start is start wtf??... :-)
 
 		javaff.JavaFF.infoOutput.println(bestHValue);
 
@@ -148,7 +151,7 @@ public class EnforcedHillClimbingSearch extends Search
 			}
 		}
 
-		if(open.isEmpty())// no reason to move forward: unsat with EHC //TODO make sure this is right: think about it more
+		if(open.isEmpty())// no reason to move forward: unsat with EHC
 			return null;
 
 		// pick the state having bestHValueNoOpenAction and return that plan

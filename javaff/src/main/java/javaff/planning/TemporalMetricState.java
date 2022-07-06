@@ -129,7 +129,11 @@ public class TemporalMetricState extends MetricState
 		s.checker.addAction((InstantAction)a, s);
 		return s;
 	}
-	
+
+	public void rebasePlan(List<Action> committedOrderedActions) {
+		plan.getOrderedActions().removeAll(committedOrderedActions);
+	}
+
 	//public BigDecimal getGValue()
 	//{
 		//return super.getGValue().subtract(new BigDecimal(openActions.size()));

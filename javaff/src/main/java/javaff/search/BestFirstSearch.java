@@ -30,30 +30,41 @@ package javaff.search;
 
 import javaff.planning.State;
 import javaff.planning.Filter;
+import javaff.planning.TemporalMetricState;
+
+import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.Hashtable;
 
 
 public class BestFirstSearch extends Search
 {
+	protected BigDecimal bestHValue;
+	protected BigDecimal bestHValueNoOpenAction;
+
+	protected State bestIntermediateState;
 	
 	protected Hashtable closed;
 	protected TreeSet open;
 	protected Filter filter = null;
+	protected float searchIntervalMs = 1000.0F;
 	
-	public BestFirstSearch(State s)
+	public BestFirstSearch(State s, float searchIntervalMs, TreeSet<State> open, Hashtable<Integer, State> closed)
     {
-		this(s, new HValueComparator());
+		this(s, searchIntervalMs, new HValueComparator());
+
+		this.open = open;
+		this.closed = closed;
 	}
 
-	public BestFirstSearch(State s, Comparator c)
+	public BestFirstSearch(State s, float searchIntervalMs, Comparator c)
     {
 		super(s);
 		setComparator(c);
-		
-		closed = new Hashtable();
-		open = new TreeSet(comp);
+
+		this.searchIntervalMs = searchIntervalMs;
 	}
 
 	public void setFilter(Filter f)
@@ -93,23 +104,49 @@ public class BestFirstSearch extends Search
 	}
 
 	public State search() {
-		
+		long startSearchTime = System.currentTimeMillis();
+		bestHValue = start.getHValue(); // and take its heuristic value as the best so far
+		bestHValueNoOpenAction = start.getHValue(); // best heuristic value so far for states with NO open action
+		bestIntermediateState = start; // best intermediate state at start is start
+
 		open.add(start);
 
-		while (!open.isEmpty())
+		while (System.currentTimeMillis() - startSearchTime < this.searchIntervalMs && !open.isEmpty())
 		{
 			State s = removeNext();
 			if (needToVisit(s)) {
 				++nodeCount;
+
 				if (s.goalReached()) {
 					return s;
 				} else {
+
+					//keep track of best intermediate state with no open actions
+					TemporalMetricState tms = (TemporalMetricState) s;
+					if(tms.openActions.isEmpty() && tms.getHValue().compareTo(bestHValueNoOpenAction) < 0)//update bestHValueNoOpenAction
+					{
+						bestHValueNoOpenAction = tms.getHValue();
+						bestIntermediateState = tms;
+					}
+
+					if (tms.getHValue().compareTo(bestHValue) < 0) // if we've found a state with a better heuristic value than the best seen so far
+						bestHValue = tms.getHValue(); // note the new best value
+
 					updateOpen(s);
 				}
 			}
 			
 		}
-		return null;
+
+
+		System.out.println("Open size = " + open.size());
+		if(open.isEmpty())// no reason to move forward: unsat with EHC
+		{
+			System.out.println("SamoneSearch(): OPEN IS EMPTY");
+			return null;
+		}
+		// pick the state having bestHValueNoOpenAction and return that plan
+		return bestIntermediateState;
 	}
 
 }

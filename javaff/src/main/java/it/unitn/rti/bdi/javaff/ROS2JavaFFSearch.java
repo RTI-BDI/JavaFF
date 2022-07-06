@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Hashtable;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.StringTokenizer;  
 
@@ -19,9 +20,12 @@ import javaff.data.GroundProblem;
 import javaff.planning.State;
 import javaff.planning.TemporalMetricState;
 import javaff.data.strips.Proposition;
+import javaff.search.HValueComparator;
 
 import plansys2_msgs.msg.Plan;
 import plansys2_msgs.msg.PlanItem;
+
+enum FFSearchStatus{EHC_SEARCHING, EHC_FAILED, BFS_SEARCHING, UNSAT};
 
 class SearchThread extends Thread{
 
@@ -201,9 +205,9 @@ class SearchThread extends Thread{
     this.sharedSearchData.open.clear();
 
     int i = 0;
-    boolean unsat = false;
+    FFSearchStatus ffstatus = FFSearchStatus.EHC_SEARCHING;
 
-    while(!unsat && !this.sharedSearchData.currentState.goalReached()){
+    while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.currentState.goalReached()){
       
       this.sharedSearchData.searchLock.lock();
 
@@ -211,12 +215,24 @@ class SearchThread extends Thread{
         ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = getCurrentStatePreconditions(this.sharedSearchData.currentState);
 
         // move forward with the search for interval search time
-        this.sharedSearchData.currentState = (TemporalMetricState) JavaFF.performFFSearch(this.sharedSearchData.currentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
+        TemporalMetricState goalOrIntermediateState = (ffstatus == FFSearchStatus.EHC_SEARCHING)?
+          (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.currentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
+          :
+          (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.currentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
 
         //check whether unsat ~ empty open and search has return null
-        unsat = this.sharedSearchData.open.isEmpty() && this.sharedSearchData.currentState == null;
+        if(ffstatus == FFSearchStatus.EHC_SEARCHING)
+        {
+          ffstatus = (this.sharedSearchData.open.isEmpty() && goalOrIntermediateState == null)? FFSearchStatus.BFS_SEARCHING : FFSearchStatus.EHC_SEARCHING;
+          
+          if(ffstatus == FFSearchStatus.BFS_SEARCHING)//just switched to BFS searching
+            this.sharedSearchData.closed.remove(new Integer(this.sharedSearchData.currentState.hashCode()));// prevent BFS fails immediately: current was already explored in last EHC search
+        
+        }else if(ffstatus == FFSearchStatus.BFS_SEARCHING)
+          ffstatus = (this.sharedSearchData.open.isEmpty() && goalOrIntermediateState == null)? FFSearchStatus.UNSAT : FFSearchStatus.EHC_SEARCHING;
 
-        if(!unsat){
+        if(ffstatus != FFSearchStatus.UNSAT && goalOrIntermediateState != null){
+          this.sharedSearchData.currentState = goalOrIntermediateState;
           // build plan string from currentState
           String planString = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
           if(debug){  
@@ -235,9 +251,7 @@ class SearchThread extends Thread{
             if(!killMySelf)//these search results are still valid
               this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
             
-            JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState);
-            this.sharedSearchData.open = new LinkedList<>();
-            this.sharedSearchData.closed = new Hashtable<>();
+            JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState, this.sharedSearchData.open);
           }
         
         }
@@ -250,7 +264,7 @@ class SearchThread extends Thread{
       i++;
     }
 
-    if(unsat){
+    if(ffstatus != FFSearchStatus.UNSAT){
       //could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  
       this.planPublisher.publish(buildUnsatSearchResult());
     }
@@ -266,7 +280,7 @@ class SharedSearchData{
 
   javaff_interfaces.msg.SearchResult searchResultMsg = new javaff_interfaces.msg.SearchResult();
   
-  LinkedList<State> open = new LinkedList<>();
+  TreeSet<State> open = new TreeSet<>(new HValueComparator());
   Hashtable<Integer, State> closed = new Hashtable<>();
   ReentrantLock searchLock = new ReentrantLock(true);
 
@@ -378,7 +392,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private void startNewSearch(String problem, int intervalSearchMS) throws javaff.parser.TokenMgrError, InterruptedException{
       
-      this.sharedSearchData.open = new LinkedList<>();
+      this.sharedSearchData.open = new TreeSet<>(new HValueComparator());
       this.sharedSearchData.closed = new Hashtable<>();
       // parse domain and problem, unground + ground processes, returning the initial state
 

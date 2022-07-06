@@ -28,6 +28,7 @@
 
 package javaff.data;
 
+import java.lang.reflect.Array;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
@@ -39,7 +40,7 @@ import java.io.PrintWriter;
 
 public class TotalOrderPlan implements Plan, Cloneable
 {
-	private List plan = new ArrayList();
+	private List<Action> plan = new ArrayList();
 
 	public Object clone()
 	{
@@ -73,9 +74,13 @@ public class TotalOrderPlan implements Plan, Cloneable
 		return plan.listIterator(plan.indexOf(a));
 	}
 
-	public Set getActions()
+	public Set<Action> getActions()
 	{
-		return new HashSet(plan);
+		return new HashSet<Action>(plan);
+	}
+	public List<Action> getOrderedActions()
+	{
+		return (plan);
 	}
 	
 	public boolean equals(Object obj)
