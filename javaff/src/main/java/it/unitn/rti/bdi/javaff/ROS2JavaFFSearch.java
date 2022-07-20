@@ -149,9 +149,8 @@ class SearchThread extends Thread{
   /*
    * Create a msg with newly computed plan (to be updated back again to contain all partially computed plan in the search from the global initial and the global target)
   */
-  private javaff_interfaces.msg.SearchResult buildNewSearchResultMsg(
-    int searchIteration,
-    boolean goalReached,
+  private javaff_interfaces.msg.PartialPlan buildNewPPlan(
+    short searchIteration,
     ros2_bdi_interfaces.msg.Desire fulfillingDesire,
     ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions, 
     TemporalMetricState currentState, 
@@ -161,6 +160,8 @@ class SearchThread extends Thread{
     javaff_interfaces.msg.PartialPlan newPPlan = new javaff_interfaces.msg.PartialPlan();
     ArrayList<plansys2_msgs.msg.PlanItem> newItems = new ArrayList<plansys2_msgs.msg.PlanItem>();
     
+    newPPlan.setIndex(searchIteration);
+
     // Iterate over old partial plans, determining highest start time so that it can be used as a lower bound after to identify the newly computed actions
     // for(plansys2_msgs.msg.Plan oldPlan : oldPartialPlansMsg.getPlans())
     //   for(plansys2_msgs.msg.PlanItem oldItem : oldPlan.getItems())
@@ -181,13 +182,7 @@ class SearchThread extends Thread{
       //oldPartialPlansMsg.getPlans().add(newPPlan);
     }
 
-    // return oldPartialPlansMsg;
-
-    javaff_interfaces.msg.SearchResult searchResult = new javaff_interfaces.msg.SearchResult();
-    searchResult.getPlans().add(newPPlan);
-    searchResult.setStatus(goalReached? searchResult.SUCCESS : searchResult.SEARCHING);
-
-    return searchResult;
+    return newPPlan;
   }
 
   /*
@@ -204,8 +199,11 @@ class SearchThread extends Thread{
   public void run(){
     this.sharedSearchData.open.clear();
 
-    int i = 0;
+    short i = 0;
     FFSearchStatus ffstatus = FFSearchStatus.EHC_SEARCHING;
+
+    //clear search result
+    this.sharedSearchData.searchResultMsg = new javaff_interfaces.msg.SearchResult();
 
     while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.currentState.goalReached()){
       
@@ -245,8 +243,12 @@ class SearchThread extends Thread{
           
           if(currentPlanMsg.getItems().size() > 0)
           {
-            this.sharedSearchData.searchResultMsg = buildNewSearchResultMsg(i,this.sharedSearchData.currentState.goalReached(), this.sharedSearchData.fulfillingDesire,
+            javaff_interfaces.msg.PartialPlan newPPlan = buildNewPPlan(i, this.sharedSearchData.fulfillingDesire,
               planPreconditions, this.sharedSearchData.currentState, currentPlanMsg);
+            
+            //Search result containing all pplans up to now within this search
+            this.sharedSearchData.searchResultMsg.getPlans().add(newPPlan);
+            this.sharedSearchData.searchResultMsg.setStatus(this.sharedSearchData.currentState.goalReached()? this.sharedSearchData.searchResultMsg.SUCCESS : this.sharedSearchData.searchResultMsg.SEARCHING);
             
             if(!killMySelf)//these search results are still valid
               this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
@@ -264,7 +266,7 @@ class SearchThread extends Thread{
       i++;
     }
 
-    if(ffstatus != FFSearchStatus.UNSAT){
+    if(ffstatus == FFSearchStatus.UNSAT){
       //could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  
       this.planPublisher.publish(buildUnsatSearchResult());
     }
@@ -272,6 +274,7 @@ class SearchThread extends Thread{
 
 }
 
+// Search data shared among ROS2JavaFFSearch and SearchThread running instance
 class SharedSearchData{
   GroundProblem groundProblem;
   TemporalMetricState currentState;

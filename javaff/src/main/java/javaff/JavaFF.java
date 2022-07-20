@@ -71,8 +71,8 @@ public class JavaFF
 			boolean errorDomain = false;
 
 			try {
-			    //File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/printing-floor/printing-domain.pddl");
-				File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/cleaner_simple/cleaner-domain.pddl");
+			    File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/printing-floor/printing-domain.pddl");
+				//File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/cleaner_simple/cleaner-domain.pddl");
 				Scanner myReader = new Scanner(myObj);
 			     while (myReader.hasNextLine()) {
 			         domain += myReader.nextLine() + "\n";

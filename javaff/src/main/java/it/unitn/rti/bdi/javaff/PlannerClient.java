@@ -34,34 +34,34 @@ public class PlannerClient {
 ;
     Client<javaff_interfaces.srv.JavaFFPlan> client =
         node.<javaff_interfaces.srv.JavaFFPlan>createClient(
-            javaff_interfaces.srv.JavaFFPlan.class, "/cleaner/javaff_server/start_plan");
+            javaff_interfaces.srv.JavaFFPlan.class, "/javaff_server/start_plan");
 
     javaff_interfaces.srv.JavaFFPlan_Request request =
         new javaff_interfaces.srv.JavaFFPlan_Request();
 
-    // String domain = "";
-    // boolean errorDomain = false;
+    String domain = "";
+    boolean errorDomain = false;
 
-    // try {
-    //     File myObj = new File("/home/devis/Documents/pddl/printing/domain.pddl");
-    //     Scanner myReader = new Scanner(myObj);
-    //     while (myReader.hasNextLine()) {
-    //         domain += myReader.nextLine() + "\n";
-    //     }
-    //     myReader.close();
-    //     System.out.println("\n\nDOMAIN:\n" + domain);
+    try {
+        File myObj = new File("/home/devis/airbus_ta/domain.pddl");
+        Scanner myReader = new Scanner(myObj);
+        while (myReader.hasNextLine()) {
+            domain += myReader.nextLine() + "\n";
+        }
+        myReader.close();
+        System.out.println("\n\nDOMAIN:\n" + domain);
 
-    // } catch (FileNotFoundException e) {
-    //     errorDomain = true;
-    //     System.out.println("An error occurred while reading domain file.");
-    //     e.printStackTrace();
-    // }
+    } catch (FileNotFoundException e) {
+        errorDomain = true;
+        System.out.println("An error occurred while reading domain file.");
+        e.printStackTrace();
+    }
 
     String problem = "";
     boolean errorProblem = false;
 
     try {
-        File myObj = new File("/home/alex/cleaner_problem.pddl");
+        File myObj = new File("/home/devis/airbus_ta/problem.pddl");
         Scanner myReader = new Scanner(myObj);
         while (myReader.hasNextLine()) {
             problem += myReader.nextLine() + "\n";
@@ -75,7 +75,7 @@ public class PlannerClient {
         e.printStackTrace();
     }
    
-    if(/*!errorDomain && */!errorProblem){
+    if(!errorDomain && !errorProblem && false){
         request.setSearchInterval(500);
         request.setProblem(problem);
 
