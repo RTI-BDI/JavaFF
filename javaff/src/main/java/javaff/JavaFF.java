@@ -382,7 +382,7 @@ public class JavaFF
 		if (goalState != null)
 		{
 			//infoOutput.println(plan);
-		 	infoOutput.println("Scheduling");
+		 	//infoOutput.println("Scheduling");
 
 		 	Scheduler scheduler = new JavaFFScheduler(ground);
 		 	tsp = scheduler.schedule(top);
@@ -417,7 +417,7 @@ public class JavaFF
 			Hashtable<Integer, State> closed) {
 
 		// Implementation of standard FF-style search
-		infoOutput.println("Performing FF search - EHC with only helpful actions");
+		//infoOutput.println("\n\nPerforming FF search - EHC with only helpful actions");
 
 		// Now, initialise an EHC searcher
 		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, searchIntervalMs, open, closed);
@@ -438,7 +438,7 @@ public class JavaFF
 			Hashtable<Integer, State> closed) {
 
 		// Implementation of standard FF-style search
-		infoOutput.println("Performing FF search - BFS with all applicable actions");
+		//infoOutput.println("\n\nPerforming FF search - BFS with all applicable actions");
 
 		// create a Best-First Searcher
 		BestFirstSearch BFS = new BestFirstSearch(initialState, searchIntervalMs, open, closed);

@@ -142,7 +142,6 @@ public class BestFirstSearch extends Search
 		System.out.println("Open size = " + open.size());
 		if(open.isEmpty())// no reason to move forward: unsat with EHC
 		{
-			System.out.println("SamoneSearch(): OPEN IS EMPTY");
 			return null;
 		}
 		// pick the state having bestHValueNoOpenAction and return that plan

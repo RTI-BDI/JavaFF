@@ -1,6 +1,7 @@
 package it.unitn.rti.bdi.javaff;
 
 import org.ros2.rcljava.publisher.Publisher;
+import org.ros2.rcljava.subscription.Subscription;
 
 // import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -310,6 +311,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private Publisher<javaff_interfaces.msg.SearchResult> planPublisher;
 
+    private Subscription<javaff_interfaces.msg.ExecutionStatus> execStatusSubscriber;
+
     private String domain;
 
     private boolean debug;
@@ -325,6 +328,10 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
       this.sharedSearchData = new SharedSearchData();
       this.planPublisher = this.node.<javaff_interfaces.msg.SearchResult>createPublisher(javaff_interfaces.msg.SearchResult.class, name + "/plan");
+      this.execStatusSubscriber = this.node.<javaff_interfaces.msg.ExecutionStatus>createSubscription(
+        javaff_interfaces.msg.ExecutionStatus.class, 
+        name + "/exec_status",
+        msg -> System.out.println("I heard: action " + msg.getExecutingAction() + " of plan with i = " + msg.getExecutingPlanIndex() + " is executing"));
     } 
 
     public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, int intervalSearchMS){

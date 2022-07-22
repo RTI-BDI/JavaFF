@@ -115,7 +115,7 @@ public class EnforcedHillClimbingSearch extends Search
 		bestHValueNoOpenAction = start.getHValue(); // best heuristic value so far for states with NO open action
 		bestIntermediateState = start; // best intermediate state at start is start wtf??... :-)
 
-		javaff.JavaFF.infoOutput.println(bestHValue);
+		//javaff.JavaFF.infoOutput.println(bestHValue);
 
 		while (System.currentTimeMillis() - startSearchTime < this.searchIntervalMs && !open.isEmpty()) // whilst still states to consider
 		{
@@ -139,7 +139,7 @@ public class EnforcedHillClimbingSearch extends Search
 					} else if (tms.getHValue().compareTo(bestHValue) < 0) {
 						// if we've found a state with a better heuristic value than the best seen so far
 						bestHValue = tms.getHValue(); // note the new best value
-						javaff.JavaFF.infoOutput.println(bestHValue);
+						//javaff.JavaFF.infoOutput.println(bestHValue);
 						open.clear(); // clear the open list
 						open.add(tms); // put this on it
 						break; // and skip looking at the other successors
