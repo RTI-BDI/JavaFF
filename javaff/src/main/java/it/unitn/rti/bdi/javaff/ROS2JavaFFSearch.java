@@ -83,6 +83,10 @@ class SearchThread extends Thread{
     return psys2Plan;
   }
 
+  /*
+   * Return all domain defined predicates that are true (i.e. in facts) in the passed state as params for the method
+   * Not domain defined predicates are the one indicating completed actions (e.g. gmove... if action move is defined)
+  */
   ArrayList<ros2_bdi_interfaces.msg.Belief> getTrueBeliefs(TemporalMetricState state)
   {
     ArrayList<ros2_bdi_interfaces.msg.Belief> beliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
@@ -99,6 +103,10 @@ class SearchThread extends Thread{
     return beliefs;
   }
 
+  /*
+   * Return all domain defined predicates that are true (i.e. in facts) in the passed state as params for the method
+   * packing them as a preconditions DNF expression (having just one clause with all predicates in end)
+  */
   ros2_bdi_interfaces.msg.ConditionsDNF getCurrentStatePreconditions(TemporalMetricState state)
   {
     ros2_bdi_interfaces.msg.ConditionsDNF preconditions = new ros2_bdi_interfaces.msg.ConditionsDNF();
@@ -241,7 +249,7 @@ class SearchThread extends Thread{
           // build plan msg and publish it
           plansys2_msgs.msg.Plan currentPlanMsg = buildPsys2Plan(planString);
           
-          if(currentPlanMsg.getItems().size() > 0)
+          if(currentPlanMsg.getItems().size() > 0)// build+pub new plan msg and rebase iff 
           {
             javaff_interfaces.msg.PartialPlan newPPlan = buildNewPPlan(i, this.sharedSearchData.fulfillingDesire,
               planPreconditions, this.sharedSearchData.currentState, currentPlanMsg);
@@ -253,7 +261,8 @@ class SearchThread extends Thread{
             if(!killMySelf)//these search results are still valid
               this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
             
-            JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState, this.sharedSearchData.open);
+            // rebase exclusively when plan presents some actions, otherwise next search cycle will start from where it left
+            JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.currentState, this.sharedSearchData.open, this.sharedSearchData.closed);
           }
         
         }

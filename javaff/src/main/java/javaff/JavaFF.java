@@ -172,7 +172,7 @@ public class JavaFF
 					" \t)\n" +
 					" )\n" +
 					" )";
-			
+			/*
 			problem = "(define (problem problem_1)\n" +
 					"\t(:domain cleaner-domain)\n" +
 					"\t(:objects\n" +
@@ -198,6 +198,7 @@ public class JavaFF
 					"\t\t)\n" +
 					"\t)\n"+
 					")";
+			 */
 			boolean errorProblem = false;
 
 			//try {
@@ -248,13 +249,14 @@ public class JavaFF
 								closed.remove(new Integer(currentState.hashCode()));//current was already explored in last EHC search
 							unsat++;
 						}
-						if(unsat < 2 && goalOrIntermediateState != null) {
+						boolean advancementMade = goalOrIntermediateState.getSolution().getActions().size() > 0;
+						if(unsat < 2 && goalOrIntermediateState != null && advancementMade) {
 							currentState = goalOrIntermediateState;
 							// build plan string from currentState
 							String planString = JavaFF.buildPlan(groundProblem, currentState);
 							System.out.println(planString);
 
-							JavaFF.rebaseOnCurrentState(groundProblem, currentState, open);
+							JavaFF.rebaseOnCurrentState(groundProblem, currentState, open, closed);
 							System.out.println("[AFTER REBASE]: open.size=" + open.size() + "\t closed.size=" + closed.size());
 						}
 
@@ -266,7 +268,7 @@ public class JavaFF
 			}
 	}
 
-	public static void rebaseOnCurrentState(GroundProblem groundProblem, TemporalMetricState currentState, TreeSet<State> open)
+	public static void rebaseOnCurrentState(GroundProblem groundProblem, TemporalMetricState currentState, TreeSet<State> open, Hashtable<Integer, State> closed)
 	{
 		// rebase ground problem on current state
 		groundProblem.initial = currentState.facts;
@@ -300,28 +302,12 @@ public class JavaFF
 		}
 		open.removeAll(diffPrefixOpenStates);
 
-		/*
-		LinkedList<State> diffPrefixClosedStates = new LinkedList<>();
-		int closedPrefixNotMatching = 0;
-		for(State closedState : closed.values())
-		{
-			TemporalMetricState closedStateTMS = (TemporalMetricState) closedState;
-			List<Action> cSCommittedOrderedActions = ((TotalOrderPlan) closedStateTMS.getSolution()).getOrderedActions();
-			int j;
-			boolean matching = true;
-			for(j=0; j<cSCommittedOrderedActions.size() && j<committedOrderedActions.size(); j++)
-				if(!committedOrderedActions.get(j).equals(cSCommittedOrderedActions.get(j)))
-				{
-					matching = false;
-					break;
-				}
 
-			if(!matching || j != committedOrderedActions.size())
-				closedPrefixNotMatching++;
-		}
+		// closed clean up at each search interval
+		closed.clear();
 		//System.out.println("openPrefixNotMatching=" + openPrefixNotMatching);
 		//System.out.println("closedPrefixNotMatching=" + closedPrefixNotMatching);
-		*/
+
 
 		// clean plan info
 		currentState.cleanPlanInfo();
@@ -395,7 +381,7 @@ public class JavaFF
 
 		if (goalState != null)
 		{
-
+			//infoOutput.println(plan);
 		 	infoOutput.println("Scheduling");
 
 		 	Scheduler scheduler = new JavaFFScheduler(ground);
