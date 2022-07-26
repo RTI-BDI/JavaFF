@@ -169,8 +169,6 @@ class SearchThread extends Thread{
     javaff_interfaces.msg.PartialPlan newPPlan = new javaff_interfaces.msg.PartialPlan();
     ArrayList<plansys2_msgs.msg.PlanItem> newItems = new ArrayList<plansys2_msgs.msg.PlanItem>();
     
-    newPPlan.setIndex(searchIteration);
-
     // Iterate over old partial plans, determining highest start time so that it can be used as a lower bound after to identify the newly computed actions
     // for(plansys2_msgs.msg.Plan oldPlan : oldPartialPlansMsg.getPlans())
     //   for(plansys2_msgs.msg.PlanItem oldItem : oldPlan.getItems())
@@ -186,6 +184,7 @@ class SearchThread extends Thread{
     }
 
     if(!newItems.isEmpty()){//found some new item, i.e. a new partial plan to be executed will be added
+      newPPlan.getPlan().setPlanIndex(searchIteration);
       newPPlan.getPlan().setItems(newItems);
       newPPlan.setTarget(buildTarget(searchIteration, planPreconditions, currentState, fulfillingDesire, maxEndTime));
       //oldPartialPlansMsg.getPlans().add(newPPlan);
