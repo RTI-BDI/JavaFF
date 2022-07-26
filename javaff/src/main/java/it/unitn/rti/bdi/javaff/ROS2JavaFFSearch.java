@@ -60,16 +60,16 @@ class SearchThread extends Thread{
         String planItemString = st.nextToken();  
         
         // retrieve indexes for time, action, duration substrings
-        int endOfTimeIndex = planItemString.indexOf(":") - 1;
+        int endOfTimeIndex = planItemString.indexOf(":");
 
         int startOfActionIndex = planItemString.indexOf("(");
         int endOfActionIndex = planItemString.indexOf(")")+1;
 
         int startDurationIndex = planItemString.indexOf("[")+1;
-        int endDurationIndex = planItemString.indexOf("]")-1;
+        int endDurationIndex = planItemString.indexOf("]");
 
         // retrive actual action, duration, time data from plan line, converting them directly to correct type
-        float time =  Float.valueOf(planItemString.substring(0, endOfTimeIndex)).floatValue();
+        float time =  Float.valueOf(planItemString.substring(0, endOfTimeIndex)).floatValue();        
         String action = planItemString.substring(startOfActionIndex, endOfActionIndex);
         float duration = Float.valueOf(planItemString.substring(startDurationIndex, endDurationIndex)).floatValue();
 
@@ -330,7 +330,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.execStatusSubscriber = this.node.<javaff_interfaces.msg.ExecutionStatus>createSubscription(
         javaff_interfaces.msg.ExecutionStatus.class, 
         name + "/exec_status",
-        msg -> System.out.println("I heard: action " + msg.getExecutingAction() + " of plan with i = " + msg.getExecutingPlanIndex() + " is executing"));
+        msg -> System.out.println("I heard: action " + msg.getExecutingAction() + ":"+msg.getPlannedStartTime()+" of plan with i = " + msg.getExecutingPlanIndex() + " is executing"));
     } 
 
     public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, int intervalSearchMS){
