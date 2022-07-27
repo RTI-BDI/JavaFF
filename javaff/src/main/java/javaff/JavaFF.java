@@ -165,12 +165,14 @@ public class JavaFF
 					"\t(near h11 h12)\n" +
 					"\t(near h21 h11_21)\n" +
 					"\t(near h22 h23)\n"+
+					"\t(= (battery_charge r2) 85)\n"+
 					" )\n" +
 					" ( :goal\n" +
 					" \t( and\n" +
 					" \t\t( printed_docs_left_in r2 r_e )\n" +
 					" \t)\n" +
 					" )\n" +
+					"(:metric maximize (+ (battery_charge r2) 0))\n" +
 					" )";
 			/*
 			problem = "(define (problem problem_1)\n" +
@@ -249,7 +251,7 @@ public class JavaFF
 								closed.remove(new Integer(currentState.hashCode()));//current was already explored in last EHC search
 							unsat++;
 						}
-						boolean advancementMade = goalOrIntermediateState.getSolution().getActions().size() > 0;
+						boolean advancementMade = goalOrIntermediateState != null && goalOrIntermediateState.getSolution().getActions().size() > 0;
 						if(unsat < 2 && goalOrIntermediateState != null && advancementMade) {
 							currentState = goalOrIntermediateState;
 							// build plan string from currentState

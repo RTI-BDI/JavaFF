@@ -316,9 +316,11 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private boolean debug;
 
-    // private AtomicBoolean killSearchThread = new AtomicBoolean(false);
-
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
+
+    private void execStatusCallback(final javaff_interfaces.msg.ExecutionStatus msg) {
+      System.out.println("I heard: action " + msg.getExecutingAction() + ":"+msg.getPlannedStartTime()+" of plan with i = " + msg.getExecutingPlanIndex() + " is executing");
+    }
 
     public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug) {
       super(name, namespace);
@@ -326,11 +328,15 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.debug = debug;
 
       this.sharedSearchData = new SharedSearchData();
+      
+      // publish updated search results
       this.planPublisher = this.node.<javaff_interfaces.msg.SearchResult>createPublisher(javaff_interfaces.msg.SearchResult.class, name + "/plan");
+      
+      // receive notification of execution status (i.e. when action x starts, it publishes to this topic)
       this.execStatusSubscriber = this.node.<javaff_interfaces.msg.ExecutionStatus>createSubscription(
         javaff_interfaces.msg.ExecutionStatus.class, 
         name + "/exec_status",
-        msg -> System.out.println("I heard: action " + msg.getExecutingAction() + ":"+msg.getPlannedStartTime()+" of plan with i = " + msg.getExecutingPlanIndex() + " is executing"));
+        this ::execStatusCallback);
     } 
 
     public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, int intervalSearchMS){

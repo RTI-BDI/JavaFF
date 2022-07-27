@@ -157,8 +157,10 @@ public class JavaFFScheduler implements Scheduler
 		if (m != null && m.func instanceof NamedFunction && !(m.func instanceof TotalTimeFunction))
 		{
 			PrecedenceResourceGraph prg = (PrecedenceResourceGraph) graphs.get((NamedFunction) m.func);
-			if (m.type == Metric.MAXIMIZE) prg.maximize();
-			else if (m.type == Metric.MINIMIZE) prg.minimize();
+			if(prg != null) {
+				if (m.type == Metric.MAXIMIZE) prg.maximize();
+				else if (m.type == Metric.MINIMIZE) prg.minimize();
+			}
 		}
 
 		stn.constrain();
