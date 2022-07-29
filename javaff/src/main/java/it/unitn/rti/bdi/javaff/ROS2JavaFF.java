@@ -65,6 +65,49 @@ public class ROS2JavaFF{
     return data;
   }
 
+  private static String addFullfilmentPredicates(String domain){
+    int currIndex = domain.indexOf(":predicates");
+    if(currIndex < 0)
+        return "";
+    currIndex +=  ":predicates".length();
+
+    boolean parsingPredicate = false;
+    String parsedPredicate = "";
+    String fulfillmentPredicates = "";
+    for(;currIndex<domain.length();currIndex++){
+        if(domain.charAt(currIndex) == '(')
+            parsingPredicate = true;
+        
+        if(parsingPredicate)
+            parsedPredicate += domain.charAt(currIndex);
+            
+        if(domain.charAt(currIndex) == ')')
+        {
+            if(parsingPredicate)
+            {
+                //reached end of a predicate -> need to create a new one starting with "f_"
+                parsingPredicate = false;
+            
+                int i = 1;
+                while(!Character.isAlphabetic(parsedPredicate.charAt(i))){i++;}
+                String fulfillmentPredicate = "(f_" + parsedPredicate.substring(i);
+                fulfillmentPredicates += fulfillmentPredicate + "\n";
+                parsedPredicate = "";
+            }
+            else
+            {
+                //reached end of predicates section
+                return (domain.substring(0, currIndex) + //original domain till end of predicates parenthesis not included
+                                fulfillmentPredicates + //fulfillment predicates
+                                ")" + //predicates are finished
+                                domain.substring(currIndex + 1));
+            }
+            
+        }
+    }
+    return domain;
+  }
+
   public static void main(final String[] args) throws Exception {   
     // for(String a : args)
     //   System.out.println(a);
@@ -76,6 +119,8 @@ public class ROS2JavaFF{
     String domainFilepath = retrieveDomainFilepath(args);
     System.out.println("Reading domain file from \"" + domainFilepath + "\"");
     String domain = readFile(domainFilepath);
+    domain = addFullfilmentPredicates(domain);
+    System.out.println(domain);
     boolean debugActive = retrieveDebug(args);
     System.out.println("Debug active = \"" + debugActive + "\"");
 

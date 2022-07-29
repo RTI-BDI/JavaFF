@@ -217,7 +217,6 @@ public class JavaFF
 			//	System.out.println("An error occurred while reading problem file.");
 			//	e.printStackTrace();
 			//}
-
 			if(!errorDomain && !errorProblem){
 				GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
 				if(groundProblem != null)
