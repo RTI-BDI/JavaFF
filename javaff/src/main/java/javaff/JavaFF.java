@@ -52,6 +52,7 @@ import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.util.*;
 
 public class JavaFF
@@ -73,6 +74,7 @@ public class JavaFF
 			try {
 			    File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/printing-floor/printing-domain.pddl");
 				//File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/cleaner_simple/cleaner-domain.pddl");
+				//File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_on_webots/share/ros2_bdi_on_webots/pddl/gripper/gripper-domain.pddl");
 				Scanner myReader = new Scanner(myObj);
 			     while (myReader.hasNextLine()) {
 			         domain += myReader.nextLine() + "\n";
@@ -85,6 +87,73 @@ public class JavaFF
 			     System.out.println("An error occurred while reading domain file.");
 			     e.printStackTrace();
 			}
+
+			/*
+			String problem = "( define ( problem problem_1 )\n" +
+					" ( :domain gripper-domain )\n" +
+					" ( :objects\n" +
+					" \tbox_a1 box_a2 box_b1 box_b2 box_c1 box_c2 - box\n" +
+					" \tstart base_1 base_2 base_3 base_a base_b base_c - stackbase\n" +
+					" \tdeposit_a deposit_b deposit_c - deposit\n" +
+					" \tgripper_a - gripper\n" +
+					" \tcarrier_a carrier_b carrier_c - carrier\n" +
+					" )\n" +
+					" ( :init\n" +
+					" \t( upon gripper_a start )\n" +
+					" \t( on box_a1 base_1 base_1 )\n" +
+					" \t( on box_c2 box_a1 base_1 )\n" +
+					" \t( on box_a2 box_c2 base_1 )\n" +
+					" \t( in box_a1 base_1 )\n" +
+					" \t( in box_c2 base_1 )\n" +
+					" \t( in box_a2 base_1 )\n" +
+					" \t( in base_1 base_1 )\n" +
+					" \t( clear box_a2 )\n" +
+					" \t( on box_b1 base_2 base_2 )\n" +
+					" \t( on box_b2 box_b1 base_2 )\n" +
+					" \t( on box_c1 box_b2 base_2 )\n" +
+					" \t( in box_b1 base_2 )\n" +
+					" \t( in box_b2 base_2 )\n" +
+					" \t( in box_c1 base_2 )\n" +
+					" \t( in base_2 base_2 )\n" +
+					" \t( clear box_c1 )\n" +
+					" \t( clear base_3 )\n" +
+					" \t( clear base_c )\n" +
+					" \t( clear base_b )\n" +
+					" \t( clear base_a )\n" +
+					" \t( in base_a base_a )\n" +
+					" \t( in base_b base_b )\n" +
+					" \t( in base_c base_c )\n" +
+					" \t( in base_3 base_3 )\n" +
+					" \t( carrier_in_deposit carrier_a deposit_a )\n" +
+					" \t( carrier_in_deposit carrier_b deposit_b )\n" +
+					" \t( carrier_in_deposit carrier_c deposit_c )\n" +
+					" \t( carrier_can_come carrier_a base_a )\n" +
+					" \t( carrier_can_come carrier_b base_b )\n" +
+					" \t( carrier_can_come carrier_c base_c )\n" +
+					" \t( carrier_can_go carrier_a deposit_a )\n" +
+					" \t( carrier_can_go carrier_b deposit_b )\n" +
+					" \t( carrier_can_go carrier_c deposit_c )\n" +
+					" \t( f_carrier_moving carrier_a box_a2 )\n" +
+					" \t( f_carrier_moving carrier_b box_b1 )\n" +
+					" \t( f_carrier_moving carrier_b box_b2 )\n" +
+					" \t( f_carrier_moving carrier_c box_c1 )\n" +
+					" \t( f_carrier_moving carrier_c box_c2 )\n" +
+					" \t( = ( holding_boxes gripper_a ) 0.0000000000 )\n" +
+					" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
+					" \t( = ( stacked base_2 ) 3.0000000000 )\n" +
+					" \t( = ( stacked base_3 ) 0.0000000000 )\n" +
+					" \t( = ( stacked base_a ) 0.0000000000 )\n" +
+					" \t( = ( stacked base_b ) 0.0000000000 )\n" +
+					" \t( = ( stacked base_c ) 0.0000000000 )\n" +
+					" \t( = ( moving_boxes carrier_a ) 0.0000000000 )\n" +
+					" \t( = ( moving_boxes carrier_b ) 0.0000000000 )\n" +
+					" \t( = ( moving_boxes carrier_c ) 0.0000000000 )\n" +
+					" )\n" +
+					" ( :goal \n" +
+					"    (and (in box_a1 base_a) (in box_a2 base_a))\n" +
+					" )\n" +
+					")\n";
+			*/
 
 			String problem = "( define ( problem problem_1 )\n" +
 					" ( :domain printing-domain )\n" +
@@ -174,6 +243,7 @@ public class JavaFF
 					" )\n" +
 					"(:metric maximize (+ (battery_charge r2) 0))\n" +
 					" )";
+
 			/*
 			problem = "(define (problem problem_1)\n" +
 					"\t(:domain cleaner-domain)\n" +
@@ -238,9 +308,9 @@ public class JavaFF
 						// move forward with the search for 500ms
 						System.out.println("[BEFORE SEARCH]: open.size=" + open.size() + "\t closed.size=" + closed.size());
 						TemporalMetricState goalOrIntermediateState = unsat==0?
-								(TemporalMetricState) JavaFF.performEHCSearch(currentState, 102, open, closed)
+								(TemporalMetricState) JavaFF.performEHCSearch(currentState, 200, open, closed)
 								:
-								(TemporalMetricState) JavaFF.performBFSSearch(currentState, 102, open, closed);
+								(TemporalMetricState) JavaFF.performBFSSearch(currentState, 200, open, closed);
 						System.out.println("[AFTER SEARCH]: open.size=" + open.size() + "\t closed.size=" + closed.size());
 
 						//check whether unsat ~ empty open and search has return null
@@ -254,8 +324,9 @@ public class JavaFF
 						if(unsat < 2 && goalOrIntermediateState != null && advancementMade) {
 							currentState = goalOrIntermediateState;
 							// build plan string from currentState
-							String planString = JavaFF.buildPlan(groundProblem, currentState);
-							System.out.println(planString);
+							TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currentState);
+							if (tsp != null) System.out.println(tsp.getPrintablePlan());
+
 
 							JavaFF.rebaseOnCurrentState(groundProblem, currentState, open, closed);
 							System.out.println("[AFTER REBASE]: open.size=" + open.size() + "\t closed.size=" + closed.size());
@@ -366,7 +437,7 @@ public class JavaFF
 		return null; //no proper sequence to close out all end snap-actions
 	}
 
-	public static String buildPlan(GroundProblem ground, TemporalMetricState goalState)
+	public static TimeStampedPlan buildPlan(GroundProblem ground, TemporalMetricState goalState)
 	{
 		String plan = "";
 
@@ -389,9 +460,9 @@ public class JavaFF
 		 	tsp = scheduler.schedule(top);
 		}
 
-		if (tsp != null) plan = tsp.getPrintablePlan();
+		//if (tsp != null) plan = tsp.getPrintablePlan();
 
-		return plan;
+		return tsp;
 	}
 
 	private static void writePlanToFile(Plan plan, File fileOut)

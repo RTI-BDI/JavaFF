@@ -28,13 +28,17 @@
 
 package javaff.data.temporal;
 
+import javaff.data.TimeStampedAction;
 import javaff.data.strips.Proposition;
 import javaff.data.strips.InstantAction;
 import javaff.planning.TemporalMetricState;
 
-public abstract class SplitInstantAction extends InstantAction
+import java.math.BigDecimal;
+
+public abstract class SplitInstantAction extends InstantAction implements Comparable
 {
     public DurativeAction parent;
+	public BigDecimal predictedInstant;//predicted instant of occurence
 	public abstract SplitInstantAction getSibling();
 
 	public boolean equals(Object obj)
@@ -54,5 +58,11 @@ public abstract class SplitInstantAction extends InstantAction
 
 	public abstract void applySplit(TemporalMetricState ts);
 	public abstract boolean exclusivelyInvariant(Proposition p);
-	
+
+	public int compareTo(Object o)
+	{
+		SplitInstantAction that = (SplitInstantAction) o;
+		if (this.predictedInstant.compareTo(that.predictedInstant) != 0) return this.predictedInstant.compareTo(that.predictedInstant);
+		return ((new Integer(this.hashCode())).compareTo(new Integer(that.hashCode())));
+	}
 }

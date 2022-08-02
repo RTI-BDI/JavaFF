@@ -28,12 +28,7 @@
 
 package javaff.scheduling;
 
-import javaff.data.TotalOrderPlan;
-import javaff.data.PartialOrderPlan;
-import javaff.data.TimeStampedPlan;
-import javaff.data.GroundProblem;
-import javaff.data.Action;
-import javaff.data.Metric;
+import javaff.data.*;
 import javaff.data.metric.BinaryComparator;
 import javaff.data.metric.ResourceOperator;
 import javaff.data.metric.NumberFunction;
@@ -43,11 +38,7 @@ import javaff.data.metric.TotalTimeFunction;
 import javaff.data.temporal.StartInstantAction;
 import javaff.planning.TemporalMetricState;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Hashtable;
+import java.util.*;
 import java.math.BigDecimal;
 
 public class JavaFFScheduler implements Scheduler
@@ -170,6 +161,14 @@ public class JavaFFScheduler implements Scheduler
 		stn.constrain();
 		
 		TimeStampedPlan p = stn.getTimes();
+
+		// (s1)... carrier_c in loading_c
+		//  (s1) move1 (s2) -> pickup -> move2 -> putdown1
+		// (s2)
+		// (s2) = (s2_reale); s3 = s2.apply(pickup)
+		// (s2)
+		//  (s1) move1 (s2) -> (s2) pickup (s3) -> move2 -> putdown1
+		// (s3)
 
 		return p;
 	}

@@ -39,6 +39,7 @@ import java.util.Iterator;
 public abstract class State implements Cloneable
 {
 	public GroundCondition goal;
+	//public Action reachedThrough;
 
 //	public Filter filter = null;
 
@@ -76,6 +77,7 @@ public abstract class State implements Cloneable
 			javaff.JavaFF.errorOutput.println(e);
 		}
 		a.apply(s);
+		//s.reachedThrough = a;
 		return s;
 	}
 

@@ -28,6 +28,9 @@
 
 package javaff.data;
 
+import javaff.data.temporal.DurativeAction;
+import javaff.data.temporal.SplitInstantAction;
+
 import java.util.Set;
 import java.util.HashSet;
 import java.util.SortedSet;
@@ -91,5 +94,27 @@ public class TimeStampedPlan implements Plan
 			s.add(a.action);
 		}
 		return s;
-	}	
+	}
+
+	public SortedSet getSortedActions()
+	{
+		return actions;
+	}
+
+	public TreeSet<SplitInstantAction> getSortedSplitInstantActions()
+	{
+		TreeSet<SplitInstantAction> splitInstantActions = new TreeSet<>();
+		Iterator ait = actions.iterator();
+		while (ait.hasNext())
+		{
+			TimeStampedAction a = (TimeStampedAction) ait.next();
+			if (a.action instanceof DurativeAction)
+			{
+				DurativeAction da = (DurativeAction) a.action;
+				splitInstantActions.add(da.startAction);
+				splitInstantActions.add(da.endAction);
+			}
+		}
+		return splitInstantActions;
+	}
 }

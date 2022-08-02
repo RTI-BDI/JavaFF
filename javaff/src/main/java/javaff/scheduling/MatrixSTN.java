@@ -46,12 +46,12 @@ import java.math.BigDecimal;
 
 public class MatrixSTN implements SimpleTemporalNetwork
 {
-    static BigDecimal EPSILON = javaff.JavaFF.EPSILON;
-    static BigDecimal ZERO = new BigDecimal(0);
-    static BigDecimal INF = new BigDecimal(100000);
-    static BigDecimal NEG_EPSILON = EPSILON.negate();
-    static int SCALE = 2;
-    static int ROUND = BigDecimal.ROUND_HALF_EVEN;
+    public static BigDecimal EPSILON = javaff.JavaFF.EPSILON;
+    public static BigDecimal ZERO = new BigDecimal(0);
+    public static BigDecimal INF = new BigDecimal(100000);
+    public static BigDecimal NEG_EPSILON = EPSILON.negate();
+    public static int SCALE = 2;
+    public static int ROUND = BigDecimal.ROUND_HALF_EVEN;
 
     BigDecimal[][] TheArray;
     ArrayList Timepoints;
@@ -78,6 +78,8 @@ public class MatrixSTN implements SimpleTemporalNetwork
             for (int j = 0; j < Timepoints.size(); j++)
                 if (!t1.equals((InstantAction) Timepoints.get(j)) && t1.isEqualIgnoreStartEnd((InstantAction) Timepoints.get(j))) {
                     found = j;
+                    // TODO Devis, you're a top notched research assistant in the top ranked university in Italy in the ICT field: fix this garbage
+                    // they're finding the corresponding end instant action by considering just name and params for no apparent reason (missingTimepoints is not populated)
                     break;
                 }
 
@@ -157,6 +159,8 @@ public class MatrixSTN implements SimpleTemporalNetwork
 
     public void constrain()
     {
+        //Adjust all -0.01 and 100000.00 time constraints to fit actual order of executions, starting from base action constraint among siblings (start-end)
+        //If inconsistency detected, (a_start - a_start) < 0
         for (int k = 0; k< Size; ++k)
         {
             for (int i = 0; i < Size; ++i)
@@ -207,6 +211,9 @@ public class MatrixSTN implements SimpleTemporalNetwork
                 DurativeAction da = ((StartInstantAction)a).parent;
                 BigDecimal time = TheArray[Timepoints.indexOf(a)][0].negate().setScale(SCALE,ROUND);
                 BigDecimal dur = TheArray[Timepoints.indexOf(da.endAction)][0].negate().subtract(time).setScale(SCALE,ROUND);
+                //set predicted instance of occurences for two instant actions
+                da.startAction.predictedInstant = time;
+                da.endAction.predictedInstant = time.add(dur);
                 plan.addAction(da, time, dur);
             }
             else if (a instanceof STRIPSInstantAction && a != START)
