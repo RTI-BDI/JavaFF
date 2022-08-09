@@ -167,6 +167,11 @@ public class STRIPSState extends State implements Cloneable
 		return plan;
 	}
 
+	public TotalOrderPlan getTPSolution()
+	{
+		return plan;
+	}
+
 	public boolean equals(Object obj)
 	{
 		if (obj instanceof STRIPSState)

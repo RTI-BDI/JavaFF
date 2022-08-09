@@ -210,26 +210,48 @@ public class SearchDataUtils {
     BigDecimal currTime = BigDecimal.ZERO;
   
     //Find time stamped action in the timestamped plan and apply its start snap action
-    for(TimeStampedAction tsa : ((TreeSet<TimeStampedAction>)tsp.getSortedActions()))
-      if(actionStartedTime.compareTo(tsa.time) == 0 && actionStarted.equals(((DurativeAction)tsa.action).toString()))
+    Iterator<SplitInstantAction> itsa = ((TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions()).iterator();
+    boolean foundStartAction = false;
+    while(itsa.hasNext() && !foundStartAction)
+    {
+      SplitInstantAction sia = itsa.next();
+      if(actionStartedTime.compareTo(sia.predictedInstant) == 0 && actionStarted.equals((sia.parent).toString()))
       {
-        currTime = tsa.time;//found starting time
-        currCommittedState = (TemporalMetricState) currCommittedState.apply(((DurativeAction) tsa.action).startAction);//apply start instant snap action
-        break;
+        foundStartAction = true;
+
+        currTime = sia.predictedInstant;//found starting time
+        if(sia.isApplicable(currCommittedState))
+        {
+          currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);//apply start instant snap action
+          System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+        }
+        else
+        {
+          return null;//sequence not applicable anymore, failure bound to arise
+        }
       }
+    }
 
     if(currTime.equals(BigDecimal.ZERO) || currCommittedState.openActions.isEmpty())//error actionStarted not found in tsp -> cannot compute nextCommittedState
       return null;
   
     //Apply all instant snap actions ordered by predicted time that are above the currTime in the simulation and stop as soon as you reach a state with no open actions
-    Iterator<SplitInstantAction> itsa = ((TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions()).iterator();
     while(itsa.hasNext() && !currCommittedState.openActions.isEmpty())
     {
       SplitInstantAction sia = itsa.next();
-      if(sia.predictedInstant.compareTo(currTime) > 0)
+      if(sia.predictedInstant.compareTo(currTime) >= 0)//we can pass by equivalent matches (i.e. two actions starting at the same time)
       {
         currTime = sia.predictedInstant;
-        currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);
+        if(sia.isApplicable(currCommittedState))
+        {
+          currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);
+          System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+        }
+        else
+        {
+          System.out.println("ERROR IN COMPUTING nextCommittedState: " + sia.toString() + " is not applicable");
+          return null;//sequence not applicable anymore, failure bound to arise
+        }
       }
     }
   

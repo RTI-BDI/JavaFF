@@ -28,6 +28,7 @@
 
 package javaff.search;
 
+import javaff.data.Action;
 import javaff.data.temporal.DurativeAction;
 import javaff.planning.State;
 import javaff.planning.Filter;
@@ -121,7 +122,8 @@ public class EnforcedHillClimbingSearch extends Search
 		{
 			State s = removeNext(); // get the next one
 
-			Set<State> successors = s.getNextStates(filter.getActions(s)); // and find its neighbourhood
+			Set<Action> azzzioni = filter.getActions(s);
+			Set<State> successors = s.getNextStates(azzzioni); // and find its neighbourhood
 
 			for (State succ : successors) {
 

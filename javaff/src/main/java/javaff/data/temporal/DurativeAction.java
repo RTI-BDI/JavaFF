@@ -35,11 +35,12 @@ import javaff.data.strips.Proposition;
 import javaff.planning.State;
 import javaff.planning.MetricState;
 
+import java.io.Serializable;
 import java.util.Set;
 import java.util.Map;
 import java.math.BigDecimal;
 
-public class DurativeAction extends Action
+public class DurativeAction extends Action implements Serializable
 {
 	public DurationFunction duration;
 

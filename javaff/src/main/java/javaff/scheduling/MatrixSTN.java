@@ -31,9 +31,11 @@ package javaff.scheduling;
 import javaff.data.Action;
 import javaff.data.Plan;
 import javaff.data.TimeStampedPlan;
+import javaff.data.TotalOrderPlan;
 import javaff.data.strips.InstantAction;
 import javaff.data.strips.STRIPSInstantAction;
 import javaff.data.strips.OperatorName;
+import javaff.data.temporal.SplitInstantAction;
 import javaff.data.temporal.StartInstantAction;
 import javaff.data.temporal.EndInstantAction;
 import javaff.data.temporal.DurativeAction;
@@ -54,42 +56,46 @@ public class MatrixSTN implements SimpleTemporalNetwork
     public static int ROUND = BigDecimal.ROUND_HALF_EVEN;
 
     BigDecimal[][] TheArray;
-    ArrayList Timepoints;
-    Plan pop;
+    ArrayList<Action> Timepoints;
+    TotalOrderPlan pop;
     int Size;
 
     InstantAction START = new STRIPSInstantAction();
 
-    public MatrixSTN(Plan plan)
+    public MatrixSTN(TotalOrderPlan plan)
     {
         pop = plan;
         START.name = new OperatorName("TIME_ZERO");
 
-        Timepoints = new ArrayList();
+        Timepoints = new ArrayList<>();
         Timepoints.add(START);
-        Timepoints.addAll(pop.getActions());
+        Timepoints.addAll(pop.getOrderedActions());
 
         ArrayList<InstantAction> missingTimepoints = new ArrayList<>();
         //fill in with missing timepoints
-        for(InstantAction t1 : ((ArrayList<InstantAction>)Timepoints)) {
-            if (t1.equals(START))
+        for(Action a1 : ((ArrayList<Action>)Timepoints)) {
+            if (a1.equals(START))
                 continue;
-            int found = -1;
-            for (int j = 0; j < Timepoints.size(); j++)
-                if (!t1.equals((InstantAction) Timepoints.get(j)) && t1.isEqualIgnoreStartEnd((InstantAction) Timepoints.get(j))) {
-                    found = j;
-                    // TODO Devis, you're a top notched research assistant in the top ranked university in Italy in the ICT field: fix this garbage
-                    // they're finding the corresponding end instant action by considering just name and params for no apparent reason (missingTimepoints is not populated)
-                    break;
+            if(a1 instanceof InstantAction) {
+                InstantAction t1 = (InstantAction) a1;
+                int found = -1;
+                for (int j = 0; j < Timepoints.size(); j++)
+                    if (!t1.equals((InstantAction) Timepoints.get(j)) && t1.isEqualIgnoreStartEnd((InstantAction) Timepoints.get(j))) {
+                        found = j;
+                        break;
+                    }
+
+                if (found < 0) {
+                    System.out.println("NOT FOUND END of " + t1);
+                    if (t1 instanceof SplitInstantAction)
+                    {
+                        missingTimepoints.add(((SplitInstantAction) t1).getSibling());
+                        System.out.println("ADDING " + ((SplitInstantAction) t1).getSibling());
+                    }
                 }
-
-            if (found < 0) {
-                System.out.println("NOT FOUND END of " + t1);
-
-                //missingTimepoints
-
             }
         }
+        Timepoints.addAll(missingTimepoints);
 
         ZERO = ZERO.setScale(SCALE, ROUND);
         INF = INF.setScale(SCALE, ROUND);
@@ -109,7 +115,6 @@ public class MatrixSTN implements SimpleTemporalNetwork
                 else TheArray[i][j] = INF;
             }
         }
-        System.out.println();
     }
 
 
@@ -128,37 +133,9 @@ public class MatrixSTN implements SimpleTemporalNetwork
         int firstpos = Timepoints.indexOf(c.y);
         int secondpos = Timepoints.indexOf(c.x);
         TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
-
-        // int firstpos = Timepoints.indexOf(c.y);
-        // int secondpos = Timepoints.indexOf(c.x);
-        // try{
-        //     System.out.println("\n\nAdding temp. contraint : ");
-        //     System.out.println("c.y: " + c.y + " (in Timepoints=" + firstpos + ")");
-        //     System.out.println("c.x: " + c.x + " (in Timepoints=" + secondpos + ")");
-        //     System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
-        //     TheArray[firstpos][secondpos] = TheArray[firstpos][secondpos].min(c.b).setScale(SCALE, ROUND);
-        //     System.out.println("TheArray[firstpos][secondpos] = " + TheArray[firstpos][secondpos]);
-
-        // }catch(Exception e){
-        //     System.out.println("Timepoints:");
-        //     for (int i=0; i<Timepoints.size(); i++){
-        //         InstantAction ia = ((InstantAction) Timepoints.get(i));
-        //         System.out.println(i+": " + ia);
-        //     }
-        //     System.out.println("\n\n");
-
-        //     System.out.println("\n\n");
-        //     for(int i=0; i<TheArray.length; i++) {
-        //         for (int j = 0; j < TheArray.length; j++)
-        //             System.out.print(TheArray[i][j] + "\t\t");
-        //         System.out.println();
-        //     }
-        //     throw new IndexOutOfBoundsException("MONA");
-        // }
     }
 
-    public void constrain()
-    {
+    public void constrain(){
         //Adjust all -0.01 and 100000.00 time constraints to fit actual order of executions, starting from base action constraint among siblings (start-end)
         //If inconsistency detected, (a_start - a_start) < 0
         for (int k = 0; k< Size; ++k)
@@ -336,7 +313,7 @@ public class MatrixSTN implements SimpleTemporalNetwork
         {
             String istr = (new Integer(i)).toString();
             istr += " ";
-            istr = "  "+istr.substring(0,2)+" ";
+            istr = "  "+istr.substring(0,2)+" \t";
             System.out.print(istr);
         }
         System.out.println();
@@ -348,8 +325,8 @@ public class MatrixSTN implements SimpleTemporalNetwork
             System.out.print((Timepoints.get(i).toString()+"                                                 ").substring(0,35)+istr);
             for (int j = 0; j < Size; ++j)
             {
-                if (TheArray[i][j].compareTo(INF) == 0) System.out.print("INF  ");
-                else System.out.print(TheArray[i][j]+"  ");
+                if (TheArray[i][j].compareTo(INF) == 0) System.out.print("INF\t");
+                else System.out.print(TheArray[i][j]+"\t");
             }
             System.out.print("\n");
         }

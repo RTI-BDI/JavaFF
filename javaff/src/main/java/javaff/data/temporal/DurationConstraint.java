@@ -32,6 +32,7 @@ import javaff.data.PDDLPrintable;
 import javaff.data.PDDLPrinter;
 import javaff.planning.MetricState;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +40,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.io.PrintStream;
 
-public class DurationConstraint implements PDDLPrintable
+public class DurationConstraint implements PDDLPrintable, Serializable
 {
 	Set constraints = new HashSet();
 

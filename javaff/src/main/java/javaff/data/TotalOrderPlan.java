@@ -28,6 +28,7 @@
 
 package javaff.data;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Set;
 import java.util.HashSet;
@@ -38,7 +39,7 @@ import java.util.ListIterator;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-public class TotalOrderPlan implements Plan, Cloneable
+public class TotalOrderPlan implements Plan, Cloneable, Serializable
 {
 	private List<Action> plan = new ArrayList();
 
@@ -49,10 +50,7 @@ public class TotalOrderPlan implements Plan, Cloneable
 		return rTOP;
 	}
 
-	public void addAction(Action a)
-	{
-		plan.add(a);
-	}
+	public void addAction(Action a) {plan.add(a);}
 
 	public int getPlanLength()
 	{

@@ -33,9 +33,11 @@ import javaff.data.strips.Proposition;
 import javaff.data.strips.InstantAction;
 import javaff.planning.TemporalMetricState;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Iterator;
 
-public abstract class SplitInstantAction extends InstantAction implements Comparable
+public abstract class SplitInstantAction extends InstantAction implements Comparable, Serializable
 {
     public DurativeAction parent;
 	public BigDecimal predictedInstant;//predicted instant of occurence

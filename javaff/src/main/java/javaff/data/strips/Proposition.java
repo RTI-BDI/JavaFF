@@ -31,14 +31,14 @@ package javaff.data.strips;
 
 import javaff.data.GroundCondition;
 import javaff.data.GroundEffect;
+import javaff.data.Parameter;
 import javaff.planning.State;
 import javaff.planning.STRIPSState;
-import java.util.Set;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
 
-public class Proposition extends javaff.data.Literal implements GroundCondition, GroundEffect
+import java.io.Serializable;
+import java.util.*;
+
+public class Proposition extends javaff.data.Literal implements GroundCondition, GroundEffect, Serializable, Cloneable
 {
 	public Proposition(PredicateSymbol p)
     {
@@ -48,6 +48,17 @@ public class Proposition extends javaff.data.Literal implements GroundCondition,
 	public String getName()
 	{
 		return name.getName();
+	}
+
+	public Object clone(){
+		Proposition prop = new Proposition((PredicateSymbol) name.clone());
+		for(Parameter p : (List<Parameter>)parameters){
+			if(p instanceof Variable)
+				prop.parameters.add(((Variable) p).clone());
+			else if(p instanceof PDDLObject)
+				prop.parameters.add(((PDDLObject) p).clone());
+		}
+		return prop;
 	}
 
 	public boolean isDomainDefined(){return name.isDomainDefined();}

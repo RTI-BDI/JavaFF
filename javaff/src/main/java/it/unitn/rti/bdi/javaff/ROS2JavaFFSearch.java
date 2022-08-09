@@ -40,18 +40,25 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       String fullActionNameTimex1000 = msg.getExecutingAction() + ":"+ (int) (msg.getPlannedStartTime()*1000);
       System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + msg.getExecutingPlanIndex() + " is executing");
       this.sharedSearchData.execStatus = msg;
+      
       TemporalMetricState nextCommittedState = SearchDataUtils.computeNextCommittedState(
         this.sharedSearchData.execNextCommittedState, 
         msg.getExecutingAction() + ":"+ (int) (msg.getPlannedStartTime()*1000),
         this.sharedSearchData.tspQueue.get(msg.getExecutingPlanIndex()));
       if(nextCommittedState != null)
       {
+        System.out.println("Old committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
+          (this.sharedSearchData.execNextCommittedState.getUniqueId()));
         //update nextCommittedState of execution
         this.sharedSearchData.execNextCommittedState = nextCommittedState;
-        System.out.println("I'm committed to make the following true:");
+        System.out.println("New committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
+          (this.sharedSearchData.execNextCommittedState.getUniqueId()));
+        
+        System.out.println("In the next committed state, the following will be made true:");
         ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefs = SearchDataUtils.getTrueBeliefs(nextCommittedState);
         for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefs)
           System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")));
+        
       }
     }
 

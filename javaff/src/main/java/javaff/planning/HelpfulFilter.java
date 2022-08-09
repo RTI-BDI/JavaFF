@@ -29,6 +29,9 @@
 package javaff.planning;
 
 import javaff.data.Action;
+import javaff.data.strips.STRIPSInstantAction;
+import javaff.data.temporal.EndInstantAction;
+import javaff.data.temporal.StartInstantAction;
 
 import java.util.Set;
 import java.util.HashSet;
@@ -57,7 +60,15 @@ public class HelpfulFilter implements Filter
 		while (ait.hasNext())
 		{
 			Action a = (Action) ait.next();
-			if (a.isApplicable(S)) ns.add(a); // and add them to the set to return if they're applicable
+			if (a.isApplicable(S)) {
+				// and add them to the set to return if they're applicable
+				if(a instanceof STRIPSInstantAction)
+					ns.add(((STRIPSInstantAction) a).clone());
+				else if(a instanceof StartInstantAction)
+					ns.add(((StartInstantAction) a).clone());
+				else if(a instanceof EndInstantAction)
+					ns.add(((EndInstantAction) a).clone());
+			}
 		}
 		return ns;
 	}

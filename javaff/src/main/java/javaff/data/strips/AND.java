@@ -36,6 +36,9 @@ import javaff.data.UngroundCondition;
 import javaff.data.UngroundEffect;
 import javaff.data.CompoundLiteral;
 import javaff.data.PDDLPrinter;
+import javaff.data.metric.BinaryComparator;
+import javaff.data.metric.NamedFunction;
+import javaff.data.metric.ResourceOperator;
 import javaff.planning.State;
 
 import java.util.Set;
@@ -44,9 +47,29 @@ import java.util.Map;
 import java.util.Iterator;
 import java.io.PrintStream;
 
-public class AND implements CompoundLiteral, GroundCondition, GroundEffect, UngroundCondition, UngroundEffect
+public class AND implements CompoundLiteral, GroundCondition, GroundEffect, UngroundCondition, UngroundEffect, Cloneable
 {
 	protected Set literals = new HashSet(); // set of Literals
+
+	public Object clone(){
+		AND and = new AND();
+		for(Object l : literals) {
+			if (l instanceof Proposition)
+				and.literals.add(((Proposition) l).clone());
+			else if (l instanceof BinaryComparator)
+				and.literals.add(((BinaryComparator) l).clone());
+			else if (l instanceof ResourceOperator)
+				and.literals.add(((ResourceOperator) l).clone());
+			else if (l instanceof NOT)
+				and.literals.add(((NOT) l).clone());
+
+			else if(l instanceof Predicate)
+				return new NOT((Literal) ((Predicate) l).clone());
+			else if(l instanceof NamedFunction)
+				return new NOT((Literal) ((NamedFunction) l).clone());
+		}
+		return and;
+	}
 
 	public void add(Object o)
 	{

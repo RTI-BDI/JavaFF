@@ -30,7 +30,9 @@ package javaff.data.strips;
 
 import javaff.data.Type;
 
-public class SimpleType extends Type
+import java.io.Serializable;
+
+public class SimpleType extends Type implements Serializable
 {	
 	protected String name;
 	protected Type superType;

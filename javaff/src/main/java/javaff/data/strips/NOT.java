@@ -34,21 +34,33 @@ import javaff.data.CompoundLiteral;
 import javaff.data.GroundEffect;
 import javaff.data.UngroundEffect;
 import javaff.data.UngroundCondition;
+import javaff.data.metric.NamedFunction;
 import javaff.planning.State;
 import javaff.planning.STRIPSState;
 
+import javax.naming.Name;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
 import java.io.PrintStream;
 
-public class NOT implements CompoundLiteral, GroundEffect, UngroundEffect
+public class NOT implements CompoundLiteral, GroundEffect, UngroundEffect, Cloneable
 {
 	Literal literal;
 
 	public NOT(Literal l)
 	{
 		literal = l;
+	}
+
+	public Object clone(){
+		if(literal instanceof Proposition)
+			return new NOT((Literal) ((Proposition) literal).clone());
+		if(literal instanceof Predicate)
+			return new NOT((Literal) ((Predicate) literal).clone());
+		if(literal instanceof NamedFunction)
+			return new NOT((Literal) ((NamedFunction) literal).clone());
+		return new NOT(literal);
 	}
 
 	public void apply(State s)

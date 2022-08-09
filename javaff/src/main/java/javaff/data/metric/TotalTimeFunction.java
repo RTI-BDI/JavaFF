@@ -37,6 +37,7 @@ public class TotalTimeFunction extends NamedFunction
 		super(new FunctionSymbol("total-time", false));
     }
 
+
 	public static TotalTimeFunction getInstance()
 	{
 		if (t == null) t = new TotalTimeFunction();

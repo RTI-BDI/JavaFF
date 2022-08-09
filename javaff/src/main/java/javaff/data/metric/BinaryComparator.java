@@ -41,7 +41,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 
-public class BinaryComparator implements javaff.data.GroundCondition, javaff.data.UngroundCondition
+public class BinaryComparator implements javaff.data.GroundCondition, javaff.data.UngroundCondition, Cloneable
 {
 	public Function first, second;
     public int type;
@@ -59,6 +59,10 @@ public class BinaryComparator implements javaff.data.GroundCondition, javaff.dat
 		first = f1;
 		second = f2;
     }
+
+	public Object clone(){
+		return new BinaryComparator(type, first, second);
+	}
 
 	public boolean isStatic()
 	{

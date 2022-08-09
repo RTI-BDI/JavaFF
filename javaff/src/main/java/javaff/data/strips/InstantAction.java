@@ -32,6 +32,8 @@ import javaff.data.GroundCondition;
 import javaff.data.GroundEffect;
 import javaff.data.Action;
 import javaff.planning.State;
+
+import java.util.Iterator;
 import java.util.Set;
 import java.util.Map;
 
@@ -43,6 +45,17 @@ public abstract class InstantAction extends Action
 	public boolean isApplicable(State s)
 	{
 		return condition.isTrue(s) && s.checkAvailability(this);
+	}
+
+	public String toString()
+	{
+		String stringrep = name.toString() + instanceCounter;
+		Iterator i = params.iterator();
+		while (i.hasNext())
+		{
+			stringrep = stringrep + " " +  i.next();
+		}
+		return stringrep;
 	}
 
 	public void apply(State s)

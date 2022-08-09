@@ -28,21 +28,26 @@
 
 package javaff.data.strips;
 
-import javaff.data.Literal;
-import javaff.data.UngroundCondition;
-import javaff.data.UngroundEffect;
-import javaff.data.GroundCondition;
-import javaff.data.GroundEffect;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Iterator;
+import javaff.data.*;
 
-public class Predicate extends Literal implements UngroundCondition, UngroundEffect
+import java.util.*;
+
+public class Predicate extends Literal implements UngroundCondition, UngroundEffect, Cloneable
 {
 	public Predicate(PredicateSymbol p)
     {
 		name = p;
+	}
+
+	public Object clone(){
+		Predicate pred = new Predicate((PredicateSymbol) name.clone());
+		for(Parameter param : (List<Parameter>)parameters){
+			if(param instanceof Variable)
+				pred.parameters.add(((Variable) param).clone());
+			else if(param instanceof PDDLObject)
+				pred.parameters.add(((PDDLObject) param).clone());
+		}
+		return pred;
 	}
 
 	public boolean effects(PredicateSymbol ps)

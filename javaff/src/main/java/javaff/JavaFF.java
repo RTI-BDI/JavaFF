@@ -31,6 +31,9 @@ package javaff;
 import javaff.data.*;
 import javaff.data.strips.Proposition;
 import javaff.data.temporal.DurativeAction;
+import javaff.data.temporal.EndInstantAction;
+import javaff.data.temporal.SplitInstantAction;
+import javaff.data.temporal.StartInstantAction;
 import javaff.parser.PDDL21parser;
 import javaff.planning.State;
 import javaff.planning.TemporalMetricState;
@@ -45,12 +48,7 @@ import javaff.search.BestFirstSearch;
 import javaff.search.EnforcedHillClimbingSearch;
 
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.util.*;
@@ -67,14 +65,151 @@ public class JavaFF
 	public static PrintStream infoOutput = System.out;
 	public static PrintStream errorOutput = System.err;
 
-	public static void main(String[] args){
+
+	public static void main(String[] args) throws IOException, ClassNotFoundException {
+
+		// stdBody(750);
+		// testBuildPlan();
+		/*
+		for(int i=0; i<512; i++) {
+			generator = new Random();
+			stdbody(generator.nextInt(500)+250);
+		}*/
+	}
+
+	public static void testBuildPlan() throws IOException, ClassNotFoundException {
+		String domain = "";
+		boolean errorDomain = false;
+
+		try {
+			File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/gripper/gripper-domain.pddl");
+			Scanner myReader = new Scanner(myObj);
+			while (myReader.hasNextLine()) {
+				domain += myReader.nextLine() + "\n";
+			}
+			myReader.close();
+			System.out.println("\n\nDOMAIN:\n" + domain);
+
+		} catch (FileNotFoundException e) {
+			errorDomain = true;
+			System.out.println("An error occurred while reading domain file.");
+			e.printStackTrace();
+		}
+
+		boolean errorProblem = false;
+		String problem = "( define ( problem problem_1 )\n" +
+				" ( :domain gripper-domain )\n" +
+				" ( :objects\n" +
+				" \tbox_a1 box_a2 box_b1 box_b2 box_c1 box_c2 - box\n" +
+				" \tstart base_1 base_2 base_3 base_a base_b base_c - stackbase\n" +
+				" \tdeposit_a deposit_b deposit_c - deposit\n" +
+				" \tgripper_a - gripper\n" +
+				" \tcarrier_a carrier_b carrier_c - carrier\n" +
+				" )\n" +
+				" ( :init\n" +
+				" \t( upon gripper_a start )\n" +
+				" \t( on box_a1 base_1 base_1 )\n" +
+				" \t( on box_c2 box_a1 base_1 )\n" +
+				" \t( on box_a2 box_c2 base_1 )\n" +
+				" \t( in box_a1 base_1 )\n" +
+				" \t( in box_c2 base_1 )\n" +
+				" \t( in box_a2 base_1 )\n" +
+				" \t( in base_1 base_1 )\n" +
+				" \t( clear box_a2 )\n" +
+				" \t( on box_b1 base_2 base_2 )\n" +
+				" \t( on box_b2 box_b1 base_2 )\n" +
+				" \t( on box_c1 box_b2 base_2 )\n" +
+				" \t( in box_b1 base_2 )\n" +
+				" \t( in box_b2 base_2 )\n" +
+				" \t( in box_c1 base_2 )\n" +
+				" \t( in base_2 base_2 )\n" +
+				" \t( clear box_c1 )\n" +
+				" \t( clear base_3 )\n" +
+				" \t( clear base_c )\n" +
+				" \t( clear base_b )\n" +
+				" \t( clear base_a )\n" +
+				" \t( in base_a base_a )\n" +
+				" \t( in base_b base_b )\n" +
+				" \t( in base_c base_c )\n" +
+				" \t( in base_3 base_3 )\n" +
+				" \t( carrier_in_deposit carrier_a deposit_a )\n" +
+				" \t( carrier_in_deposit carrier_b deposit_b )\n" +
+				" \t( carrier_in_deposit carrier_c deposit_c )\n" +
+				" \t( carrier_can_come carrier_a base_a )\n" +
+				" \t( carrier_can_come carrier_b base_b )\n" +
+				" \t( carrier_can_come carrier_c base_c )\n" +
+				" \t( carrier_can_go carrier_a deposit_a )\n" +
+				" \t( carrier_can_go carrier_b deposit_b )\n" +
+				" \t( carrier_can_go carrier_c deposit_c )\n" +
+				" \t( = ( holding_boxes gripper_a ) 0.0000000000 )\n" +
+				" \t( = ( stacked start ) 0.0000000000 )\n" +
+				" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
+				" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
+				" \t( = ( stacked base_2 ) 3.0000000000 )\n" +
+				" \t( = ( stacked base_3 ) 0.0000000000 )\n" +
+				" \t( = ( stacked base_a ) 0.0000000000 )\n" +
+				" \t( = ( stacked base_b ) 0.0000000000 )\n" +
+				" \t( = ( stacked base_c ) 0.0000000000 )\n" +
+				" \t( = ( moving_boxes carrier_a ) 0.0000000000 )\n" +
+				" \t( = ( moving_boxes carrier_b ) 0.0000000000 )\n" +
+				" \t( = ( moving_boxes carrier_c ) 0.0000000000 )\n" +
+				" )\n" +
+				" ( :goal \n" +
+				"    (and (carrier_moving carrier_a box_a2) (carrier_moving carrier_c box_c2)) \n" +
+				" )\n" +
+				")\n";
+
+
+
+		if(!errorDomain && !errorProblem){
+			GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
+			if(groundProblem != null) {
+				TemporalMetricState initialState = groundProblem.getTemporalMetricInitialState();
+				System.out.println("\n\nInit State: " + initialState.toString());
+				TemporalMetricState currState = (TemporalMetricState) initialState.clone();
+
+				FileInputStream fis	= new FileInputStream("/home/devis/p0.txt");
+				ObjectInputStream ois = new ObjectInputStream(fis);
+				TotalOrderPlan top = (TotalOrderPlan) ois.readObject(); // down-casting object
+				for(Action a : top.getOrderedActions())
+					if(a instanceof StartInstantAction)
+						currState = (TemporalMetricState) currState.apply(a);
+				for(Action a : top.getOrderedActions())
+					if(a instanceof EndInstantAction)
+						currState = (TemporalMetricState) currState.apply(a);
+
+				//check state after sim p0 == 7c1e7dc
+				System.out.println("\n\nAfter sim P0 State: " + currState.toString());
+
+				//sim rebase
+				groundProblem.initial = currState.facts;
+				groundProblem.state = currState;
+				groundProblem.functionValues = currState.funcValues;
+				currState.cleanPlanInfo();
+
+				//sim p1
+				fis	= new FileInputStream("/home/devis/p11.txt");
+				ois = new ObjectInputStream(fis);
+				top = (TotalOrderPlan) ois.readObject(); // down-casting object
+				for(Action a : top.getOrderedActions())
+					currState = (TemporalMetricState) currState.apply(a);
+
+				//check state after p1 == f8a15dea
+				System.out.println("\n\nAfter sim P11 State: " + currState.toString());
+
+				//call buildPlan
+				TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currState);
+				System.out.println(tsp.getPrintablePlan());
+			}
+		}
+	}
+
+	public static void stdBody(int searchInterval) throws IOException {
 			String domain = "";
 			boolean errorDomain = false;
 
 			try {
-			    File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/printing-floor/printing-domain.pddl");
-				//File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/cleaner_simple/cleaner-domain.pddl");
-				//File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_on_webots/share/ros2_bdi_on_webots/pddl/gripper/gripper-domain.pddl");
+				File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/gripper/gripper-domain.pddl");
 				Scanner myReader = new Scanner(myObj);
 			     while (myReader.hasNextLine()) {
 			         domain += myReader.nextLine() + "\n";
@@ -88,7 +223,7 @@ public class JavaFF
 			     e.printStackTrace();
 			}
 
-			/*
+
 			String problem = "( define ( problem problem_1 )\n" +
 					" ( :domain gripper-domain )\n" +
 					" ( :objects\n" +
@@ -133,12 +268,9 @@ public class JavaFF
 					" \t( carrier_can_go carrier_a deposit_a )\n" +
 					" \t( carrier_can_go carrier_b deposit_b )\n" +
 					" \t( carrier_can_go carrier_c deposit_c )\n" +
-					" \t( f_carrier_moving carrier_a box_a2 )\n" +
-					" \t( f_carrier_moving carrier_b box_b1 )\n" +
-					" \t( f_carrier_moving carrier_b box_b2 )\n" +
-					" \t( f_carrier_moving carrier_c box_c1 )\n" +
-					" \t( f_carrier_moving carrier_c box_c2 )\n" +
 					" \t( = ( holding_boxes gripper_a ) 0.0000000000 )\n" +
+					" \t( = ( stacked start ) 0.0000000000 )\n" +
+					" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
 					" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
 					" \t( = ( stacked base_2 ) 3.0000000000 )\n" +
 					" \t( = ( stacked base_3 ) 0.0000000000 )\n" +
@@ -150,11 +282,11 @@ public class JavaFF
 					" \t( = ( moving_boxes carrier_c ) 0.0000000000 )\n" +
 					" )\n" +
 					" ( :goal \n" +
-					"    (and (in box_a1 base_a) (in box_a2 base_a))\n" +
+					"    (and (carrier_moving carrier_a box_a2) (carrier_moving carrier_c box_c2)) \n" +
 					" )\n" +
 					")\n";
-			*/
 
+			/*
 			String problem = "( define ( problem problem_1 )\n" +
 					" ( :domain printing-domain )\n" +
 					" ( :objects\n" +
@@ -243,9 +375,9 @@ public class JavaFF
 					" )\n" +
 					"(:metric maximize (+ (battery_charge r2) 0))\n" +
 					" )";
-
+			*/
 			/*
-			problem = "(define (problem problem_1)\n" +
+			String problem = "(define (problem problem_1)\n" +
 					"\t(:domain cleaner-domain)\n" +
 					"\t(:objects\n" +
 					"\t\tcleaner - robot\n" +
@@ -259,7 +391,8 @@ public class JavaFF
 					"\t\t(workfree cleaner)\n" +
 					"\t\t(in cleaner dock)\n" +
 					"\t\t(pred_a pluto)\n" +
-					"\t\t(= (battery_charge cleaner) 90))\n" +
+					"\t\t(= (battery_charge cleaner) 90)\n" +
+					"\t\t)\n" +
 					"\t(:goal \n" +
 					"\t\t(and\n" +
 					"\t\t\t(cleaned dock)\n" +
@@ -270,7 +403,7 @@ public class JavaFF
 					"\t\t)\n" +
 					"\t)\n"+
 					")";
-			 */
+			*/
 			boolean errorProblem = false;
 
 			//try {
@@ -306,12 +439,18 @@ public class JavaFF
 
 
 						// move forward with the search for 500ms
-						System.out.println("[BEFORE SEARCH]: open.size=" + open.size() + "\t closed.size=" + closed.size());
+						System.out.println("[BEFORE SEARCH state="+currentState.toString()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
+
 						TemporalMetricState goalOrIntermediateState = unsat==0?
-								(TemporalMetricState) JavaFF.performEHCSearch(currentState, 200, open, closed)
+								(TemporalMetricState) JavaFF.performEHCSearch(currentState, searchInterval, open, closed)
 								:
-								(TemporalMetricState) JavaFF.performBFSSearch(currentState, 200, open, closed);
-						System.out.println("[AFTER SEARCH]: open.size=" + open.size() + "\t closed.size=" + closed.size());
+								(TemporalMetricState) JavaFF.performBFSSearch(currentState, searchInterval, open, closed);
+						System.out.println("[AFTER SEARCH state="+goalOrIntermediateState.toString()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
+
+						// Serializing 'a'
+						FileOutputStream fos = new FileOutputStream("/home/devis/xyz.txt");
+						ObjectOutputStream oos = new ObjectOutputStream(fos);
+						oos.writeObject(goalOrIntermediateState.getTPSolution());
 
 						//check whether unsat ~ empty open and search has return null
 						if(open.isEmpty() && goalOrIntermediateState == null)
@@ -443,8 +582,6 @@ public class JavaFF
 
 		TotalOrderPlan top = null;
 		if (goalState != null) top = (TotalOrderPlan) goalState.getSolution();
-		if (top != null) plan = top.getPrintablePlan();
-
 		// ********************************
 		// Schedule a plan
 		// ********************************
@@ -460,6 +597,8 @@ public class JavaFF
 		 	tsp = scheduler.schedule(top);
 		}
 
+		if (top != null) plan = top.getPrintablePlan();
+			System.out.println("SNAP ACTIONS plan with " + top.getPlanLength() + ": \n" + plan);
 		//if (tsp != null) plan = tsp.getPrintablePlan();
 
 		return tsp;

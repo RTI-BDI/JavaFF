@@ -35,6 +35,7 @@ import javaff.data.metric.NumberFunction;
 import javaff.data.metric.NamedFunction;
 import javaff.data.metric.MetricSymbolStore;
 import javaff.data.metric.TotalTimeFunction;
+import javaff.data.strips.OperatorName;
 import javaff.data.temporal.StartInstantAction;
 import javaff.planning.TemporalMetricState;
 
@@ -52,6 +53,19 @@ public class JavaFFScheduler implements Scheduler
 
 	public TimeStampedPlan schedule(TotalOrderPlan top)
 	{
+		HashMap<String, Integer> counters = new HashMap<>();
+		for(Action a : top.getOrderedActions())
+		{
+			int counter = 1;
+			if(!counters.containsKey(a.toString()))
+				counters.put(a.toString(), counter);
+			else{
+				counter = ((Integer)counters.get(a.toString()))+1;
+				counters.put(a.toString(), counter);
+			}
+			a.instanceCounter = counter;
+		}
+
 		PartialOrderPlan pop = GreedyPartialOrderLifter.lift(top, problem);
 
 		MatrixSTN stn = new MatrixSTN(top);

@@ -38,7 +38,7 @@ import java.util.Map;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 
-public class SimpleDurationConstraint extends DurationConstraint
+public class SimpleDurationConstraint extends DurationConstraint implements Cloneable
 {
 	protected int type;
 	protected DurationFunction variable;
@@ -49,6 +49,10 @@ public class SimpleDurationConstraint extends DurationConstraint
 		type = t;
 		variable = v;
 		value = f;
+	}
+
+	public Object clone(){
+		return new SimpleDurationConstraint(variable, value, type);
 	}
 
 	public DurationConstraint ground(Map varMap)

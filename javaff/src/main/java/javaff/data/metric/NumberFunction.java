@@ -31,12 +31,17 @@ package javaff.data.metric;
 import javaff.scheduling.MatrixSTN;
 import javaff.planning.MetricState;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Map;
 
-public class NumberFunction implements Function
+public class NumberFunction implements Function, Serializable, Cloneable
 {
     final protected BigDecimal num;
+
+	public Object clone(){
+		return new NumberFunction(num);
+	}
 
     public NumberFunction(double d)
     {

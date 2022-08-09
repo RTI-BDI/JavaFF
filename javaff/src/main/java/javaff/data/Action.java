@@ -29,18 +29,17 @@
 package javaff.data;
 
 import javaff.data.strips.OperatorName;
+import javaff.planning.STRIPSState;
 import javaff.planning.State;
 
-import java.util.Set;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
+import java.io.Serializable;
+import java.util.*;
 import java.math.BigDecimal;
 
-public abstract class Action
+public abstract class Action implements Serializable, Cloneable
 {
-    public OperatorName name;
+	public OperatorName name;
+	public int instanceCounter = 1;
     public List params = new ArrayList(); // List of PDDLObjects
 
 	public BigDecimal cost = new BigDecimal(0);
@@ -70,13 +69,15 @@ public abstract class Action
 		if (obj instanceof Action)
 		{
 			Action a = (Action) obj;
-			return (name.equals(a.name) && params.equals(a.params));
+			return (name.equals(a.name) && params.equals(a.params)) && instanceCounter == a.instanceCounter;
 		}
 		else return false;
     }
 
     public int hashCode()
     {
+		if(name == null || params == null)
+			System.out.println("");
         return name.hashCode() ^ params.hashCode();
     }
 }

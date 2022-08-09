@@ -29,11 +29,12 @@
 package javaff.data;
 
 import javaff.planning.State;
+
+import java.io.Serializable;
 import java.util.Set;
 import java.util.Map;
 
-public interface GroundCondition extends Condition
-{
+public interface GroundCondition extends Condition, Serializable {
 	public boolean isTrue(State s); // returns whether this conditions is true is State S
 	public Set getConditionalPropositions();
 	public Set getComparators();

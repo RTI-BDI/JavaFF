@@ -30,7 +30,9 @@ package javaff.data.strips;
 
 import javaff.data.Type;
 
-public class PDDLObject extends javaff.data.Parameter 
+import java.io.Serializable;
+
+public class PDDLObject extends javaff.data.Parameter implements Serializable
 {
 	public PDDLObject(String n)
     {
@@ -40,6 +42,10 @@ public class PDDLObject extends javaff.data.Parameter
 	public PDDLObject(String n, Type t)
     {
 		super(n,t);
+	}
+
+	public Object clone(){
+		return new PDDLObject(name,type);
 	}
 
 	public int hashCode()

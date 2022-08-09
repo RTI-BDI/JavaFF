@@ -35,9 +35,17 @@ import java.math.BigDecimal;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class State implements Cloneable
 {
+	static final AtomicLong NEXT_ID = new AtomicLong(0);
+	final long id = NEXT_ID.getAndIncrement();
+
+	public long getUniqueId() {
+		return id;
+	}
+
 	public GroundCondition goal;
 	//public Action reachedThrough;
 

@@ -28,10 +28,28 @@
 
 package javaff.data.metric;
 
-public class FunctionSymbol extends javaff.data.strips.PredicateSymbol
-{
+import javaff.data.Parameter;
+import javaff.data.strips.PDDLObject;
+import javaff.data.strips.PredicateSymbol;
+import javaff.data.strips.Variable;
+
+import java.util.List;
+
+public class FunctionSymbol extends PredicateSymbol implements Cloneable {
 	public FunctionSymbol(String name, boolean domainDefined)
     {
 		super(name, domainDefined);
+	}
+
+	public Object clone(){
+		FunctionSymbol fs = new FunctionSymbol(name, domainDefined);
+		fs.staticValue = staticValue;
+		for(Parameter p : (List<Parameter>)params) {
+			if (p instanceof Variable)
+				fs.params.add((Parameter) ((Variable) p).clone());
+			else if (p instanceof PDDLObject)
+				fs.params.add((Parameter) ((PDDLObject) p).clone());
+		}
+		return fs;
 	}
 }
