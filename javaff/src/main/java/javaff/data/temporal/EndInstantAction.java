@@ -154,7 +154,7 @@ public class EndInstantAction extends SplitInstantAction implements Serializable
 			eia.parent = da;
 		}
 
-		eia.parent.endAction = this;
+		eia.parent.endAction = eia;
 
 		return eia;
 	}

@@ -152,7 +152,7 @@ public class StartInstantAction extends SplitInstantAction implements Serializab
 			sia.parent = da;
 		}
 
-		sia.parent.startAction = this;
+		sia.parent.startAction = sia;
 
 		return sia;
 	}
