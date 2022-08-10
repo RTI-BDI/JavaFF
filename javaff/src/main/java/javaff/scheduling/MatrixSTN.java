@@ -28,10 +28,7 @@
 
 package javaff.scheduling;
 
-import javaff.data.Action;
-import javaff.data.Plan;
-import javaff.data.TimeStampedPlan;
-import javaff.data.TotalOrderPlan;
+import javaff.data.*;
 import javaff.data.strips.InstantAction;
 import javaff.data.strips.STRIPSInstantAction;
 import javaff.data.strips.OperatorName;

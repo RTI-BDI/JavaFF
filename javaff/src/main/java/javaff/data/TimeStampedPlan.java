@@ -31,6 +31,7 @@ package javaff.data;
 import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.SplitInstantAction;
 
+import java.sql.Time;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.SortedSet;
@@ -42,44 +43,49 @@ import java.math.BigDecimal;
 
 public class TimeStampedPlan implements Plan
 {
-	public SortedSet actions = new TreeSet();
+	public SortedSet<TimeStampedAction> actions = new TreeSet();
 
-	public void addAction(Action a, BigDecimal t)
+	public TimeStampedAction addAction(Action a, BigDecimal t)
 	{
-		addAction(a, t, null);
+		return addAction(a, t, null);
 	}
 
-	public void addAction(Action a, BigDecimal t, BigDecimal d)
+	public TimeStampedAction addAction(Action a, BigDecimal t, BigDecimal d)
 	{
-		actions.add(new TimeStampedAction(a,t,d));
+		TimeStampedAction tsa = (new TimeStampedAction(a,t,d));
+		actions.add(tsa);
+		return tsa;
 	}
 
 		
 	public void print(PrintStream p)
 	{
-		Iterator ait = actions.iterator();
+		Iterator<TimeStampedAction> ait = actions.iterator();
 		while (ait.hasNext())
 		{
-			TimeStampedAction a = (TimeStampedAction) ait.next();
+			TimeStampedAction a = ait.next();
 			p.println(a);
 		}
 	}
 
-	public String getPrintablePlan()
+	public String getPrintablePlan(boolean printExecStatus)
 	{
 		StringBuilder result = new StringBuilder();
 		for (TimeStampedAction action : (Iterable<TimeStampedAction>) actions)
-			result.append((TimeStampedAction) action).append("\n");
+			if(printExecStatus)
+				result.append(action.toStringWithExecStatus()).append("\n");
+			else
+				result.append(action).append("\n");
 
 		return result.toString();
 	}
 
 	public void print(PrintWriter p)
 	{
-		Iterator ait = actions.iterator();
+		Iterator<TimeStampedAction> ait = actions.iterator();
 		while (ait.hasNext())
 		{
-			TimeStampedAction a = (TimeStampedAction) ait.next();
+			TimeStampedAction a = ait.next();
 			p.println(a);
 		}
 	}
@@ -87,16 +93,24 @@ public class TimeStampedPlan implements Plan
 	public Set getActions()
 	{
 		Set s = new HashSet();
-		Iterator ait = actions.iterator();
+		Iterator<TimeStampedAction> ait = actions.iterator();
 		while (ait.hasNext())
 		{
-			TimeStampedAction a = (TimeStampedAction) ait.next();
+			TimeStampedAction a =  ait.next();
 			s.add(a.action);
 		}
 		return s;
 	}
 
-	public SortedSet getSortedActions()
+	public void markExecuted(DurativeAction da, BigDecimal startTime){
+		for(TimeStampedAction ta : actions)
+		{
+			if(ta.time.compareTo(startTime) == 0 && ta.action.equals(da))
+				ta.executed = true;
+		}
+	}
+
+	public SortedSet<TimeStampedAction> getSortedActions()
 	{
 		return actions;
 	}

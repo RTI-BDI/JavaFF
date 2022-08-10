@@ -47,18 +47,20 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         this.sharedSearchData.tspQueue.get(msg.getExecutingPlanIndex()));
       if(nextCommittedState != null)
       {
-        System.out.println("Old committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
-          (this.sharedSearchData.execNextCommittedState.getUniqueId()));
+        // System.out.println("Old committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
+        //   (this.sharedSearchData.execNextCommittedState.getUniqueId()));
         //update nextCommittedState of execution
         this.sharedSearchData.execNextCommittedState = nextCommittedState;
-        System.out.println("New committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
-          (this.sharedSearchData.execNextCommittedState.getUniqueId()));
+        // System.out.println("New committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
+        //   (this.sharedSearchData.execNextCommittedState.getUniqueId()));
         
-        System.out.println("In the next committed state, the following will be made true:");
-        ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefs = SearchDataUtils.getTrueBeliefs(nextCommittedState);
-        for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefs)
-          System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")));
+        // System.out.println("In the next committed state, the following will be made true:");
+        // ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefs = SearchDataUtils.getTrueBeliefs(nextCommittedState);
+        // for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefs)
+        //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")));
         
+        System.out.println("Current committed actions in plan " + msg.getExecutingPlanIndex() + ":");
+        System.out.println(this.sharedSearchData.tspQueue.get(msg.getExecutingPlanIndex()).getPrintablePlan(true));
       }
     }
 

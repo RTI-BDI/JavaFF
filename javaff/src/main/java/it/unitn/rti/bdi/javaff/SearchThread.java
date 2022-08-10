@@ -9,9 +9,11 @@ import java.util.Set;
 import javaff.JavaFF;
 import javaff.data.Action;
 import javaff.data.GroundProblem;
+import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 
 import javaff.data.temporal.SplitInstantAction;
+import javaff.data.temporal.DurativeAction;
 import javaff.planning.TemporalMetricState;
 
 // import java.io.FileOutputStream;
@@ -107,7 +109,7 @@ public class SearchThread extends Thread{
             if (tsp != null && tsp.getSortedActions().size()>0) 
             {
               this.sharedSearchData.tspQueue.add(tsp);
-              planString = tsp.getPrintablePlan();//get plan string
+              planString = tsp.getPrintablePlan(false);//get plan string
 
               plansys2_msgs.msg.Plan currentPlanMsg = SearchDataUtils.buildPsys2Plan(tsp);// build plan msg and publish it          
               

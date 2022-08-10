@@ -13,6 +13,7 @@ import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.SplitInstantAction;
+import javaff.data.temporal.EndInstantAction;
 
 import javaff.scheduling.MatrixSTN;
 
@@ -208,7 +209,6 @@ public class SearchDataUtils {
   
     //find currTime of execution corresponding to start time of actionStarted
     BigDecimal currTime = BigDecimal.ZERO;
-  
     //Find time stamped action in the timestamped plan and apply its start snap action
     Iterator<SplitInstantAction> itsa = ((TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions()).iterator();
     boolean foundStartAction = false;
@@ -223,7 +223,7 @@ public class SearchDataUtils {
         if(sia.isApplicable(currCommittedState))
         {
           currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);//apply start instant snap action
-          System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+          //System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
         }
         else
         {
@@ -234,7 +234,7 @@ public class SearchDataUtils {
 
     if(currTime.equals(BigDecimal.ZERO) || currCommittedState.openActions.isEmpty())//error actionStarted not found in tsp -> cannot compute nextCommittedState
       return null;
-  
+
     //Apply all instant snap actions ordered by predicted time that are above the currTime in the simulation and stop as soon as you reach a state with no open actions
     while(itsa.hasNext() && !currCommittedState.openActions.isEmpty())
     {
@@ -245,7 +245,12 @@ public class SearchDataUtils {
         if(sia.isApplicable(currCommittedState))
         {
           currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);
-          System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+          //System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+          if(sia instanceof EndInstantAction)
+          {
+            //mark the timestamped action in the tsp as executed
+            tsp.markExecuted(sia.parent, sia.parent.startAction.predictedInstant);
+          }
         }
         else
         {

@@ -68,7 +68,7 @@ public class JavaFF
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-		// stdBody(750);
+		 stdBody(750);
 		// testBuildPlan();
 		/*
 		for(int i=0; i<512; i++) {
@@ -199,7 +199,7 @@ public class JavaFF
 
 				//call buildPlan
 				TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currState);
-				System.out.println(tsp.getPrintablePlan());
+				System.out.println(tsp.getPrintablePlan(false));
 			}
 		}
 	}
@@ -447,11 +447,6 @@ public class JavaFF
 								(TemporalMetricState) JavaFF.performBFSSearch(currentState, searchInterval, open, closed);
 						System.out.println("[AFTER SEARCH state="+goalOrIntermediateState.toString()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
 
-						// Serializing 'a'
-						FileOutputStream fos = new FileOutputStream("/home/devis/xyz.txt");
-						ObjectOutputStream oos = new ObjectOutputStream(fos);
-						oos.writeObject(goalOrIntermediateState.getTPSolution());
-
 						//check whether unsat ~ empty open and search has return null
 						if(open.isEmpty() && goalOrIntermediateState == null)
 						{
@@ -464,7 +459,7 @@ public class JavaFF
 							currentState = goalOrIntermediateState;
 							// build plan string from currentState
 							TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currentState);
-							if (tsp != null) System.out.println(tsp.getPrintablePlan());
+							if (tsp != null) System.out.println(tsp.getPrintablePlan(false));
 
 
 							JavaFF.rebaseOnCurrentState(groundProblem, currentState, open, closed);

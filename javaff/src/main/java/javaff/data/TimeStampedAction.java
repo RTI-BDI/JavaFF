@@ -36,6 +36,8 @@ public class TimeStampedAction implements Comparable
 	public BigDecimal time;
 	public BigDecimal duration;
 
+	public boolean executed;
+
 	public TimeStampedAction(Action a, BigDecimal t, BigDecimal d)
 	{
 		action = a;
@@ -46,6 +48,14 @@ public class TimeStampedAction implements Comparable
 	public String toString()
 	{
 		String str = time +": ("+action+")";
+		if (duration != null) str += " ["+duration+"]";
+		return str;
+	}
+
+	public String toStringWithExecStatus()
+	{
+		String str = (executed? "EXEC" : "WAIT") +
+			"\t" + time +": ("+action+")";
 		if (duration != null) str += " ["+duration+"]";
 		return str;
 	}
