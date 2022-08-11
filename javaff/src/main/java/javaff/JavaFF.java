@@ -68,8 +68,8 @@ public class JavaFF
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-		 stdBody(750);
-		// testBuildPlan();
+		// stdBody(750);
+		testBuildPlan();
 		/*
 		for(int i=0; i<512; i++) {
 			generator = new Random();
@@ -592,8 +592,8 @@ public class JavaFF
 		 	tsp = scheduler.schedule(top);
 		}
 
-		if (top != null) plan = top.getPrintablePlan();
-			System.out.println("SNAP ACTIONS plan with " + top.getPlanLength() + ": \n" + plan);
+		// if (top != null) plan = top.getPrintablePlan();
+		// 	System.out.println("SNAP ACTIONS plan with " + top.getPlanLength() + ": \n" + plan);
 		//if (tsp != null) plan = tsp.getPrintablePlan();
 
 		return tsp;

@@ -209,8 +209,11 @@ public class SearchDataUtils {
   
     //find currTime of execution corresponding to start time of actionStarted
     BigDecimal currTime = BigDecimal.ZERO;
+
+    TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+
     //Find time stamped action in the timestamped plan and apply its start snap action
-    Iterator<SplitInstantAction> itsa = ((TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions()).iterator();
+    Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
     boolean foundStartAction = false;
     while(itsa.hasNext() && !foundStartAction)
     {
@@ -220,50 +223,97 @@ public class SearchDataUtils {
         foundStartAction = true;
 
         currTime = sia.predictedInstant;//found starting time
-        if(sia.isApplicable(currCommittedState))
+        if(!sia.alreadyApplied(currCommittedState))
         {
-          currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);//apply start instant snap action
-          //System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+          if(sia.isApplicable(currCommittedState))
+          {
+            currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);//apply start instant snap action
+            // System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+          }
+          else
+          {
+            return null;//sequence not applicable anymore, failure bound to arise
+          }
         }
         else
         {
-          return null;//sequence not applicable anymore, failure bound to arise
+          return null;
+          // System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " ALREADY applied");
         }
       }
     }
 
     if(currTime.equals(BigDecimal.ZERO) || currCommittedState.openActions.isEmpty())//error actionStarted not found in tsp -> cannot compute nextCommittedState
       return null;
-
-    //Apply all instant snap actions ordered by predicted time that are above the currTime in the simulation and stop as soon as you reach a state with no open actions
+    
+    // reset iterator to the start because it might be that you have to still apply actions that start at the same time, but which have been put before in the treeset
+    itsa = orderedSplitInstantActions.iterator();
+    // apply all instant snap actions ordered by predicted time that are above the currTime in the simulation and stop as soon as you reach a state with no open actions
     while(itsa.hasNext() && !currCommittedState.openActions.isEmpty())
     {
       SplitInstantAction sia = itsa.next();
       if(sia.predictedInstant.compareTo(currTime) >= 0)//we can pass by equivalent matches (i.e. two actions starting at the same time)
       {
         currTime = sia.predictedInstant;
-        if(sia.isApplicable(currCommittedState))
+        if(!sia.alreadyApplied(currCommittedState))
         {
-          currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);
-          //System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
-          if(sia instanceof EndInstantAction)
+          if(sia.isApplicable(currCommittedState))
           {
-            //mark the timestamped action in the tsp as executed
-            tsp.markExecuted(sia.parent, sia.parent.startAction.predictedInstant);
+            currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);
+            // System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+            if(sia instanceof EndInstantAction)
+            {
+              //mark the timestamped action in the tsp as executed
+              tsp.markExecuted(sia.parent, sia.parent.startAction.predictedInstant);
+            }
+          }
+          else
+          {
+            System.out.println("ERROR IN COMPUTING nextCommittedState: " + sia.toString() + " is not applicable");
+            return null;//sequence not applicable anymore, failure bound to arise
           }
         }
-        else
-        {
-          System.out.println("ERROR IN COMPUTING nextCommittedState: " + sia.toString() + " is not applicable");
-          return null;//sequence not applicable anymore, failure bound to arise
-        }
+        // else
+        // {
+        //   System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " ALREADY applied");
+        // }
       }
     }
   
     if(!currCommittedState.openActions.isEmpty())
       return null;
-    else
-      return currCommittedState;
+    
+    // mark current instant in next committed state
+    currCommittedState.currInstant = currTime;
+    return currCommittedState;
+  }
+
+  public static javaff_interfaces.msg.ExecutionStatus getSearchBaseline(ArrayList<TimeStampedPlan> tspQueue)
+  {
+    javaff_interfaces.msg.ExecutionStatus searchBaseline = new javaff_interfaces.msg.ExecutionStatus();
+    
+    // baseline default value, execution not started yet, therefore no valid index of executing action
+    searchBaseline.setExecutingPlanIndex((short)-1);
+    searchBaseline.setExecutingAction("");
+    searchBaseline.setPlannedStartTime(-1.0f);
+
+    boolean reachedLastExecAction = false;
+    for(short i = 0; i<tspQueue.size() && !reachedLastExecAction; i++)
+    {
+      for(TimeStampedAction tsa : tspQueue.get(i).getSortedActions())
+      {
+        if(tsa.executed)
+        {
+          searchBaseline.setExecutingPlanIndex(i);
+          searchBaseline.setExecutingAction("(" + tsa.action + ")");
+          searchBaseline.setPlannedStartTime(tsa.time.floatValue());
+        }
+        else
+          reachedLastExecAction = true;
+      }
+    }
+
+    return searchBaseline;
   }
 
 

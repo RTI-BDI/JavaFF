@@ -31,6 +31,7 @@ package javaff.data.strips;
 import javaff.data.GroundCondition;
 import javaff.data.GroundEffect;
 import javaff.data.Action;
+import javaff.planning.STRIPSState;
 import javaff.planning.State;
 
 import java.util.Iterator;
@@ -45,6 +46,14 @@ public abstract class InstantAction extends Action
 	public boolean isApplicable(State s)
 	{
 		return condition.isTrue(s) && s.checkAvailability(this);
+	}
+
+	/* Returns true if actions already applied in solution to get to s*/
+	public boolean alreadyApplied(STRIPSState s){
+		for(Action a : s.getTPSolution().getOrderedActions())
+			if(this.equals(a))
+				return true;
+		return false;
 	}
 
 	public String toString()

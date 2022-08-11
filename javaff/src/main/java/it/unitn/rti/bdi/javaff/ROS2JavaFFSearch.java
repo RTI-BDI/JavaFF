@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 import org.ros2.rcljava.node.BaseComposableNode;
 
@@ -34,23 +35,39 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private boolean debug;
 
+    private javaff_interfaces.msg.ExecutionStatus lastExecStatusUpd;
+
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
 
     private void execStatusCallback(final javaff_interfaces.msg.ExecutionStatus msg) {
+      if(this.sharedSearchData.execNextCommittedState != null && lastExecStatusUpd != null)
+        if(lastExecStatusUpd.getExecutingPlanIndex() < msg.getExecutingPlanIndex())
+          this.sharedSearchData.execNextCommittedState.currInstant = BigDecimal.ZERO;//reset to zero when new plan starts
+
+      lastExecStatusUpd = msg;//store last upd
       String fullActionNameTimex1000 = msg.getExecutingAction() + ":"+ (int) (msg.getPlannedStartTime()*1000);
       System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + msg.getExecutingPlanIndex() + " is executing");
       this.sharedSearchData.execStatus = msg;
       
-      TemporalMetricState nextCommittedState = SearchDataUtils.computeNextCommittedState(
-        this.sharedSearchData.execNextCommittedState, 
-        msg.getExecutingAction() + ":"+ (int) (msg.getPlannedStartTime()*1000),
-        this.sharedSearchData.tspQueue.get(msg.getExecutingPlanIndex()));
+      System.out.println("Curr instant in sim " + this.sharedSearchData.execNextCommittedState.currInstant + 
+        "\t action to occur at " + msg.getExecutingPlanIndex());
+      TemporalMetricState nextCommittedState = (this.sharedSearchData.execNextCommittedState.currInstant.compareTo(new BigDecimal(msg.getPlannedStartTime())) < 0)?
+          SearchDataUtils.computeNextCommittedState(
+            this.sharedSearchData.execNextCommittedState, 
+            msg.getExecutingAction() + ":"+ (int) (msg.getPlannedStartTime()*1000),
+            this.sharedSearchData.tspQueue.get(msg.getExecutingPlanIndex()))
+          :
+          null;
       if(nextCommittedState != null)
       {
+        
         // System.out.println("Old committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
         //   (this.sharedSearchData.execNextCommittedState.getUniqueId()));
         //update nextCommittedState of execution
+
+        this.sharedSearchData.searchLock.lock();
         this.sharedSearchData.execNextCommittedState = nextCommittedState;
+        this.sharedSearchData.searchLock.unlock();
         // System.out.println("New committed state=" + this.sharedSearchData.execNextCommittedState.toString() + "\tUnique ID=" + 
         //   (this.sharedSearchData.execNextCommittedState.getUniqueId()));
         
