@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.math.BigDecimal;
 
 import javaff.JavaFF;
 import javaff.data.Action;
@@ -50,10 +51,13 @@ public class SearchThread extends Thread{
     this.sharedSearchData.searchResultMsg = new javaff_interfaces.msg.SearchResult();
     this.sharedSearchData.tspQueue = new ArrayList<TimeStampedPlan>();
 
+    this.sharedSearchData.searchResultMsg.setSearchBaseline(SearchDataUtils.getSearchBaseline(this.sharedSearchData.tspQueue));
+
     // we're starting a new search from scratch: we assume agent is not executing now
     // therefore its current state of execution is equivalent to the initial state of search
     // it's going to be updated as soon as the search starts
     this.sharedSearchData.execNextCommittedState = (TemporalMetricState) this.sharedSearchData.searchCurrentState.clone();
+    this.sharedSearchData.execNextCommittedState.currInstant = BigDecimal.ZERO;
 
     while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.searchCurrentState.goalReached()){
 
@@ -78,9 +82,20 @@ public class SearchThread extends Thread{
           
           if(ffstatus == FFSearchStatus.BFS_SEARCHING)//just switched to BFS searching
           {   
-            this.sharedSearchData.closed.remove(new Integer(this.sharedSearchData.searchCurrentState.hashCode()));// prevent BFS fails immediately: current was already explored in last EHC search
-            // TODO handle here switch to nextCommittedState to restart search from it and NOT from currentState, otherwise might be too late to find a viable solution
-            // IMPORTANT TO ASK: when this modification is done, I should step into an empty closed list, right???
+            // here switch to nextCommittedState to restart search from it and NOT from currentState, otherwise might be too late to find a viable solution
+            
+            // retrieve last exec committed action and put it as a search baseline, so that scheduler knows
+            this.sharedSearchData.searchResultMsg.setSearchBaseline(SearchDataUtils.getSearchBaseline(this.sharedSearchData.tspQueue));
+            
+            // clear tspqueue index additional plans after currently committed one that are not valid anymore...
+            while(this.sharedSearchData.searchResultMsg.getSearchBaseline().getExecutingPlanIndex() < (this.sharedSearchData.tspQueue.size() - 1)) 
+              this.sharedSearchData.tspQueue.remove(this.sharedSearchData.tspQueue.size() - 1);
+
+            // put next exec committedState as base for the next search iteration
+            this.sharedSearchData.searchCurrentState = this.sharedSearchData.execNextCommittedState;
+
+             // rebase on new search base state for next bfs search iterations
+             JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState, this.sharedSearchData.open, this.sharedSearchData.closed);
           }
 
         }else if(ffstatus == FFSearchStatus.BFS_SEARCHING)
