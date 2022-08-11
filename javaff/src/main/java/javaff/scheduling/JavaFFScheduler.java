@@ -75,7 +75,7 @@ public class JavaFFScheduler implements Scheduler
 
 		//Sort out the Durations
 		Map states = new Hashtable(); //Maps (Actions => states (which the actions are applied in))
-		Iterator ait = top.getActions().iterator();
+		Iterator ait = top.getOrderedActions().iterator();
 		TemporalMetricState state = problem.getTemporalMetricInitialState();
 		while (ait.hasNext())
 		{
@@ -92,11 +92,11 @@ public class JavaFFScheduler implements Scheduler
 
 		
 		
-		stn.consistent();
+		boolean consistent = stn.consistent();
 
 		// sort out the resources
 		Map graphs = new Hashtable(); //Maps (NamedResources => PrecedenceGraphs)
-		ait = top.getActions().iterator();
+		ait = top.getOrderedActions().iterator();
 		while (ait.hasNext())
 		{
 			Action a = (Action) ait.next();

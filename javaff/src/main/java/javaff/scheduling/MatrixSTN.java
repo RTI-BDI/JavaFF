@@ -37,7 +37,6 @@ import javaff.data.temporal.StartInstantAction;
 import javaff.data.temporal.EndInstantAction;
 import javaff.data.temporal.DurativeAction;
 
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Iterator;
