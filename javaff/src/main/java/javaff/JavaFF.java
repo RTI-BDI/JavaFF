@@ -68,8 +68,8 @@ public class JavaFF
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-		// stdBody(750);
-		testBuildPlan();
+		 stdBody(750);
+		//testBuildPlan();
 		/*
 		for(int i=0; i<512; i++) {
 			generator = new Random();
@@ -459,6 +459,10 @@ public class JavaFF
 							currentState = goalOrIntermediateState;
 							// build plan string from currentState
 							TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currentState);
+							TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+							Set operators = orderedSplitInstantActions.iterator().next().effect.getOperators();
+							Set addPropositions = orderedSplitInstantActions.iterator().next().effect.getAddPropositions();
+							Set delPropositions = orderedSplitInstantActions.iterator().next().effect.getDeletePropositions();
 							if (tsp != null) System.out.println(tsp.getPrintablePlan(false));
 
 

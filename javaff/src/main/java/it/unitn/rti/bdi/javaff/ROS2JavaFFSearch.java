@@ -46,14 +46,16 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       // Compare lastExecStatusUpd with msg to know: which actions have started and which have terminated
       
       short planIndex = msg.getExecutingPlanIndex();
-
+      
       if(this.sharedSearchData.execNextCommittedState != null && lastExecStatusUpd != null)
         if(lastExecStatusUpd.getExecutingPlanIndex() < planIndex)
           this.sharedSearchData.execNextCommittedState.currInstant = BigDecimal.ZERO;//reset to zero when new plan starts
+      
+      TimeStampedPlan tsp = this.sharedSearchData.tspQueue.get(planIndex); 
+      
       for(javaff_interfaces.msg.ActionExecutionStatus aesMsg : msg.getExecutingActions())
       {
         BigDecimal startTimeBD = (new BigDecimal(aesMsg.getPlannedStartTime())).setScale(MatrixSTN.SCALE, MatrixSTN.ROUND);
-        TimeStampedPlan tsp = this.sharedSearchData.tspQueue.get(planIndex); 
 
         String fullActionNameTimex1000 = aesMsg.getExecutingAction() + ":"+ (int) (aesMsg.getPlannedStartTime()*1000);
         TimeStampedAction tsa = tsp.getTimeStampedAction(fullActionNameTimex1000);
@@ -78,12 +80,19 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         // {
         //   System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + planIndex + " has executed successfully");
         // }
-
+        
         // update action status in stored tsp
         tsp.markExecStatus(aesMsg.getExecutingAction().substring(1,aesMsg.getExecutingAction().length()-1), startTimeBD, aesMsg.getStatus());
+      }
   
         System.out.println("Current status - committed actions in plan " + planIndex + ":");
         System.out.println(this.sharedSearchData.tspQueue.get(planIndex).getPrintablePlan(true));
+        // System.out.println(msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("init"), msg.getPddlProblem().indexOf("goal")));
+
+      System.out.println("\n\nSim: " + SearchDataUtils.successSimToGoal(this.domain, msg.getPddlProblem(), tsp));
+      // if(!SearchDataUtils.successSimToGoal(this.domain, msg.getPddlProblem(), tsp))
+      {
+        // restart planning from nextCommittedState
       }
 
       lastExecStatusUpd = msg;//store last upd

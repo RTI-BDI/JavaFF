@@ -2,18 +2,25 @@ package it.unitn.rti.bdi.javaff;
 
 import java.util.ArrayList;
 import java.util.StringTokenizer;  
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.Iterator;
 
 import java.math.BigDecimal;
 
+import javaff.JavaFF;
+
+import javaff.data.strips.AND;
 import javaff.data.strips.Proposition;
+import javaff.data.metric.ResourceOperator;
 import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.SplitInstantAction;
+import javaff.data.temporal.StartInstantAction;
 import javaff.data.temporal.EndInstantAction;
+import javaff.data.GroundProblem;
 
 import javaff.scheduling.MatrixSTN;
 
@@ -334,5 +341,78 @@ public class SearchDataUtils {
     javaff_interfaces.msg.SearchResult searchResult = new javaff_interfaces.msg.SearchResult();
     searchResult.setStatus(searchResult.FAILED);
     return searchResult;
+  }
+
+  /*
+   * Simulate a problem from pddl applying the effects based on the state (i.e. WAITING, RUNNING, EXECUTED) and return the response
+  */
+  public static boolean successSimToGoal(String domain, String problem, TimeStampedPlan tsp){
+    javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
+    GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
+    TemporalMetricState currentState = JavaFF.computeInitialState(groundProblem);
+    
+    TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+    Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
+    while(itsa.hasNext())
+    {
+      SplitInstantAction sia = itsa.next();
+      String actionFullNameNoTime = "(" + sia.parent.toString() + ")";
+      float actionPlannedTimeStart = (sia instanceof StartInstantAction)? sia.predictedInstant.floatValue()*1000.0f : sia.getSibling().predictedInstant.floatValue()*1000.0f;
+      String actionFullName = actionFullNameNoTime + ":" + actionPlannedTimeStart;
+      TimeStampedAction tsa = tsp.getTimeStampedAction(actionFullName);
+      if(tsa == null)
+      { 
+        System.out.println("ERROR: TimeStampedAction: '" + actionFullName + "' is null! ("+actionPlannedTimeStart+")");
+        return false;
+      }
+      
+      if(tsa.status == aes.RUNNING && sia instanceof StartInstantAction)
+      {
+        // apply all no-domain defined effect of sia Start snap action of a currently running action
+        Set operators = sia.effect.getOperators();
+        Set addPropositions = sia.effect.getAddPropositions();
+        Set delPropositions = sia.effect.getDeletePropositions();
+        for(Object op : operators)
+          if(op instanceof ResourceOperator)
+            if(! (((ResourceOperator) op).resource.getPredicateSymbol().isDomainDefined()))
+              ((ResourceOperator) op).apply(currentState);
+            
+
+        for(Object addProp : addPropositions)
+          if(addProp instanceof Proposition)
+            if(! (((Proposition) addProp).getPredicateSymbol().isDomainDefined()))
+              ((Proposition) addProp).apply(currentState);
+            
+        
+        for(Object delProp : delPropositions)
+          if(delProp instanceof Proposition)
+            if(! (((Proposition) delProp).getPredicateSymbol().isDomainDefined()))
+              ((Proposition) delProp).apply(currentState);
+            
+
+      }else if(tsa.status == aes.WAITING || tsa.status == aes.RUNNING && sia instanceof EndInstantAction){
+        // apply instant actions iff 
+        // not started yet (hence, not even effect at start applied) 
+        //  OR 
+        // iff currently running and here we've reached the end snap action in the simulation
+
+        // System.out.println("I'd like to apply " + sia + " in:");
+        // for(ros2_bdi_interfaces.msg.Belief b : getTrueBeliefs(currentState))
+        // {
+        //   String paramsJoined = "";
+        //   for(String param : b.getParams())
+        //     paramsJoined += " " + param;
+        //   System.out.println("- " + b.getName() + paramsJoined);
+        // }
+
+        if(sia.isApplicable(currentState))
+          currentState = (TemporalMetricState) currentState.apply(sia);
+        else{
+          System.out.println("Sia not applicable: " + sia);
+          return false;
+        }
+      }
+    }
+    return currentState.goalReached();//TODO apply all enqueued tsp here (some might still be missing though) or return directly true 
   }
 }
