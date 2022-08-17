@@ -36,7 +36,9 @@ public class TimeStampedAction implements Comparable
 	public BigDecimal time;
 	public BigDecimal duration;
 
-	public boolean executed;
+	public boolean committed = false;
+
+	public short status = 0;
 
 	public TimeStampedAction(Action a, BigDecimal t, BigDecimal d)
 	{
@@ -54,7 +56,24 @@ public class TimeStampedAction implements Comparable
 
 	public String toStringWithExecStatus()
 	{
-		String str = (executed? "EXEC" : "WAIT") +
+		String runningStatus = "";
+		switch(status)
+		{
+			case 0:
+				runningStatus = "WAITING";
+				break;
+			case 1:
+				runningStatus = "RUNNING";
+				break;
+			case 2:
+				runningStatus = "SUCCESS";
+				break;
+			case 3:
+				runningStatus = "FAILURE";
+				break;
+		}
+		String str = runningStatus +
+				"\t" + (committed? "COMMIT" : "NO_COM") +
 			"\t" + time +": ("+action+")";
 		if (duration != null) str += " ["+duration+"]";
 		return str;

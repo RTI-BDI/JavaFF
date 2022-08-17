@@ -30,6 +30,7 @@ package javaff.data;
 
 import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.SplitInstantAction;
+import javaff.scheduling.MatrixSTN;
 
 import java.sql.Time;
 import java.util.Set;
@@ -102,11 +103,20 @@ public class TimeStampedPlan implements Plan
 		return s;
 	}
 
-	public void markExecuted(DurativeAction da, BigDecimal startTime){
+	public void markCommitted(DurativeAction da, BigDecimal startTime){
 		for(TimeStampedAction ta : actions)
 		{
 			if(ta.time.compareTo(startTime) == 0 && ta.action.equals(da))
-				ta.executed = true;
+				ta.committed = true;
+		}
+	}
+
+	public void markExecStatus(String durativeActionName, BigDecimal startTime, short execStatus){
+		//System.out.println("Marking '" + durativeActionName + "' starting at " + startTime + " as " + execStatus);
+		for(TimeStampedAction ta : actions)
+		{
+			if(ta.time.compareTo(startTime) == 0 && ta.action.toString().equals(durativeActionName))
+				ta.status = execStatus;
 		}
 	}
 
@@ -115,6 +125,20 @@ public class TimeStampedPlan implements Plan
 		return actions;
 	}
 
+	public TimeStampedAction getTimeStampedAction(String actionFullName)
+	{
+		BigDecimal actionTime = BigDecimal.valueOf(Float.parseFloat(actionFullName.substring(actionFullName.lastIndexOf(":")+1))/1000.0f).setScale(MatrixSTN.SCALE,MatrixSTN.ROUND);
+		String actionName = actionFullName.substring(actionFullName.indexOf("(")+1, actionFullName.lastIndexOf(")"));
+
+		Iterator<TimeStampedAction> itsa = this.getSortedActions().iterator();
+		while(itsa.hasNext()) {
+			TimeStampedAction tsa = itsa.next();
+			if (actionTime.compareTo(tsa.time) == 0 && actionName.equals((tsa.action).toString()))
+				return tsa;
+		}
+
+		return null;
+	}
 	public TreeSet<SplitInstantAction> getSortedSplitInstantActions()
 	{
 		TreeSet<SplitInstantAction> splitInstantActions = new TreeSet<>();

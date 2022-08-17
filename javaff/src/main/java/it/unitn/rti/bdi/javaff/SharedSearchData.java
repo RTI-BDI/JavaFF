@@ -18,7 +18,6 @@ public class SharedSearchData {
     public TemporalMetricState searchCurrentState; // search current state
     
     public TemporalMetricState execNextCommittedState; // next state with no open action in execution
-    public javaff_interfaces.msg.ExecutionStatus execStatus;
   
     public ros2_bdi_interfaces.msg.Desire fulfillingDesire;
     public ArrayList<TimeStampedPlan> tspQueue;

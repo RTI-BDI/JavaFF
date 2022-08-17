@@ -263,8 +263,8 @@ public class SearchDataUtils {
             // System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
             if(sia instanceof EndInstantAction)
             {
-              //mark the timestamped action in the tsp as executed
-              tsp.markExecuted(sia.parent, sia.parent.startAction.predictedInstant);
+              //mark the timestamped action in the tsp as committed for execution
+              tsp.markCommitted(sia.parent, sia.parent.startAction.predictedInstant);
             }
           }
           else
@@ -294,22 +294,32 @@ public class SearchDataUtils {
     
     // baseline default value, execution not started yet, therefore no valid index of executing action
     searchBaseline.setExecutingPlanIndex((short)-1);
-    searchBaseline.setExecutingAction("");
-    searchBaseline.setPlannedStartTime(-1.0f);
+    searchBaseline.setPddlProblem("");//TODO eval need for pddl problem here
 
-    boolean reachedLastExecAction = false;
-    for(short i = 0; i<tspQueue.size() && !reachedLastExecAction; i++)
-    {
+    ArrayList<javaff_interfaces.msg.ActionExecutionStatus> aesList = new ArrayList<>();
+
+    TimeStampedPlan executingTsp = null;
+    short i = 0;
+    short successStatus = (new javaff_interfaces.msg.ActionExecutionStatus()).SUCCESS;
+    for(; i<tspQueue.size() && executingTsp == null; i++)
       for(TimeStampedAction tsa : tspQueue.get(i).getSortedActions())
+        if(tsa.status != successStatus)
+          executingTsp = tspQueue.get(i);
+
+    if(executingTsp != null)
+    {
+      searchBaseline.setExecutingPlanIndex(i);
+
+      for(TimeStampedAction tsa : executingTsp.getSortedActions())
       {
-        if(tsa.executed)
+        javaff_interfaces.msg.ActionExecutionStatus aesMsg = new javaff_interfaces.msg.ActionExecutionStatus();
         {
-          searchBaseline.setExecutingPlanIndex(i);
-          searchBaseline.setExecutingAction("(" + tsa.action + ")");
-          searchBaseline.setPlannedStartTime(tsa.time.floatValue());
+          // fill action execution status msg directly by mirroring current and last updated tsp
+          aesMsg.setExecutingAction("(" + tsa.action + ")");
+          aesMsg.setPlannedStartTime(tsa.time.floatValue());
+          aesMsg.setStatus(tsa.status);
         }
-        else
-          reachedLastExecAction = true;
+        aesList.add(aesMsg);
       }
     }
 
