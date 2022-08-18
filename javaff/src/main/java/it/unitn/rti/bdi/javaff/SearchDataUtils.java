@@ -346,11 +346,12 @@ public class SearchDataUtils {
   /*
    * Simulate a problem from pddl applying the effects based on the state (i.e. WAITING, RUNNING, EXECUTED) and return the response
   */
-  public static boolean successSimToGoal(String domain, String problem, TimeStampedPlan tsp){
+  public static boolean successSimToGoal(String domain, String problem, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue){
     javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
     GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
     TemporalMetricState currentState = JavaFF.computeInitialState(groundProblem);
     
+    TimeStampedPlan tsp = tspQueue.get(currPlanIndex);
     TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
     Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
     while(itsa.hasNext())
@@ -362,11 +363,15 @@ public class SearchDataUtils {
       TimeStampedAction tsa = tsp.getTimeStampedAction(actionFullName);
       if(tsa == null)
       { 
-        System.out.println("ERROR: TimeStampedAction: '" + actionFullName + "' is null! ("+actionPlannedTimeStart+")");
+        System.out.println("SIMTOGOAL: tsa '" + actionFullName + "' not found!");
         return false;
       }
-      
-      if(tsa.status == aes.RUNNING && sia instanceof StartInstantAction)
+
+    
+      boolean actionBTStillRunning = tsa.status == aes.RUNNING || tsa.status == aes.RUN_SUC;
+      boolean actionBTWaiting = tsa.status == aes.WAITING || tsa.status == aes.RUN_SUC;
+
+      if(actionBTStillRunning && sia instanceof StartInstantAction)
       {
         // apply all no-domain defined effect of sia Start snap action of a currently running action
         Set operators = sia.effect.getOperators();
@@ -389,30 +394,44 @@ public class SearchDataUtils {
             if(! (((Proposition) delProp).getPredicateSymbol().isDomainDefined()))
               ((Proposition) delProp).apply(currentState);
             
+        //System.out.println("Applied non domain defined effects of " + sia);
 
-      }else if(tsa.status == aes.WAITING || tsa.status == aes.RUNNING && sia instanceof EndInstantAction){
+      }else if(actionBTWaiting || actionBTStillRunning && sia instanceof EndInstantAction){
         // apply instant actions iff 
         // not started yet (hence, not even effect at start applied) 
         //  OR 
         // iff currently running and here we've reached the end snap action in the simulation
 
-        // System.out.println("I'd like to apply " + sia + " in:");
-        // for(ros2_bdi_interfaces.msg.Belief b : getTrueBeliefs(currentState))
-        // {
-        //   String paramsJoined = "";
-        //   for(String param : b.getParams())
-        //     paramsJoined += " " + param;
-        //   System.out.println("- " + b.getName() + paramsJoined);
-        // }
-
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
         else{
-          System.out.println("Sia not applicable: " + sia);
+          System.out.println("SIMTOGOAL: sia not applicable: " + sia);
           return false;
         }
+
+        //System.out.println("Applied effects of " + sia);
       }
     }
-    return currentState.goalReached();//TODO apply all enqueued tsp here (some might still be missing though) or return directly true 
+
+    // apply all enqueued tsp here (some might still be missing though: deal with it externally) 
+    currPlanIndex++;
+    for(; currPlanIndex < tspQueue.size(); currPlanIndex++)
+    {
+      tsp = tspQueue.get(currPlanIndex);
+      orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+      itsa = orderedSplitInstantActions.iterator();
+      while(itsa.hasNext())
+      { 
+        SplitInstantAction sia = itsa.next();
+        if(sia.isApplicable(currentState))
+          currentState = (TemporalMetricState) currentState.apply(sia);
+        else
+          return false;
+        
+        //System.out.println("Applied effects of " + sia);
+      }
+    }
+
+    return currentState.goalReached();
   }
 }

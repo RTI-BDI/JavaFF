@@ -545,7 +545,7 @@ public class JavaFF
 
 
 		//PDDLPrinter.printDomainFile(unground, System.out);
-		PDDLPrinter.printProblemFile(unground, System.out);
+		//PDDLPrinter.printProblemFile(unground, System.out);
 
 		GroundProblem ground = unground.ground();
 

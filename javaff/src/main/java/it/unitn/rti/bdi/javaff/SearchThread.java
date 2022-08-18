@@ -180,6 +180,8 @@ public class SearchThread extends Thread{
       //could return and pub. this: PPlans[Plan[ PlanItem{-1, "", -1} ]]  
       this.planPublisher.publish(SearchDataUtils.buildUnsatSearchResult());
     }
+
+    this.sharedSearchData.goalReached = this.sharedSearchData.searchCurrentState != null? this.sharedSearchData.searchCurrentState.goalReached() : false;
   }
 
 }

@@ -76,23 +76,24 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
             this.sharedSearchData.searchLock.unlock();
           }
         }
-        // else if(aesMsg.getStatus() == aesMsg.SUCCESS)
-        // {
-        //   System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + planIndex + " has executed successfully");
-        // }
         
         // update action status in stored tsp
         tsp.markExecStatus(aesMsg.getExecutingAction().substring(1,aesMsg.getExecutingAction().length()-1), startTimeBD, aesMsg.getStatus());
       }
   
-        System.out.println("Current status - committed actions in plan " + planIndex + ":");
-        System.out.println(this.sharedSearchData.tspQueue.get(planIndex).getPrintablePlan(true));
-        // System.out.println(msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("init"), msg.getPddlProblem().indexOf("goal")));
-
-      System.out.println("\n\nSim: " + SearchDataUtils.successSimToGoal(this.domain, msg.getPddlProblem(), tsp));
-      // if(!SearchDataUtils.successSimToGoal(this.domain, msg.getPddlProblem(), tsp))
+      System.out.println("Current status - committed actions in plan " + planIndex + ":");
+      System.out.println(this.sharedSearchData.tspQueue.get(planIndex).getPrintablePlan(true));
+        
+      if (this.sharedSearchData.goalReached)// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
       {
-        // restart planning from nextCommittedState
+        boolean goalStillReachable = SearchDataUtils.successSimToGoal(this.domain, msg.getPddlProblem(), planIndex, this.sharedSearchData.tspQueue);
+        // System.out.println(msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("init"), msg.getPddlProblem().indexOf("goal")));
+        System.out.println("Sim: " + goalStillReachable);    
+        
+        if(!goalStillReachable)
+        {
+          //TODO
+        }  
       }
 
       lastExecStatusUpd = msg;//store last upd
@@ -194,7 +195,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
       this.sharedSearchData.groundProblem = JavaFF.computeGroundProblem(this.domain, problem);
       this.sharedSearchData.searchCurrentState = JavaFF.computeInitialState(this.sharedSearchData.groundProblem);
-
+      this.sharedSearchData.goalReached = false;
       this.sharedSearchData.intervalSearchMS = intervalSearchMS > 100? intervalSearchMS : 100;
 
       // start search thread from initial state and init. search data

@@ -52,8 +52,7 @@ public class PDDL21parser implements PDDL21parserConstants {
             JavaFF.parsingOutput.println(e.getMessage());
             req = false;
         }
-        if (req) JavaFF.parsingOutput.println("Parsed domain successfully");
-                else JavaFF.parsingOutput.println("Parsing of domain failed");
+        if (!req) JavaFF.parsingOutput.println("Parsing of domain failed");
                 return req;
     }
 
@@ -71,8 +70,7 @@ public class PDDL21parser implements PDDL21parserConstants {
             JavaFF.parsingOutput.println(e.getMessage());
             probsuc = false;
         }
-        if (probsuc) JavaFF.parsingOutput.println("Parsed problem successfully");
-                else JavaFF.parsingOutput.println("Parsing problem failed");
+        if (!probsuc) JavaFF.parsingOutput.println("Parsing problem failed");
                 return probsuc;
     }
 

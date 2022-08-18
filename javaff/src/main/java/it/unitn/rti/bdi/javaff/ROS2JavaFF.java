@@ -120,7 +120,7 @@ public class ROS2JavaFF{
     System.out.println("Reading domain file from \"" + domainFilepath + "\"");
     String domain = readFile(domainFilepath);
     domain = addFullfilmentPredicates(domain);
-    System.out.println(domain);
+    //System.out.println(domain);
     boolean debugActive = retrieveDebug(args);
     System.out.println("Debug active = \"" + debugActive + "\"");
 

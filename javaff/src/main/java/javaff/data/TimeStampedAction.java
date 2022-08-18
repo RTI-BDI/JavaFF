@@ -66,9 +66,12 @@ public class TimeStampedAction implements Comparable
 				runningStatus = "RUNNING";
 				break;
 			case 2:
-				runningStatus = "SUCCESS";
+				runningStatus = "RUN_SUC";
 				break;
 			case 3:
+				runningStatus = "SUCCESS";
+				break;
+			case 4:
 				runningStatus = "FAILURE";
 				break;
 		}

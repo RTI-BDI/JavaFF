@@ -26,6 +26,7 @@ public class SharedSearchData {
     public TreeSet<State> open = new TreeSet<>(new HValueComparator());
     public Hashtable<Integer, State> closed = new Hashtable<>();
     public ReentrantLock searchLock = new ReentrantLock(true);
-  
+    public boolean goalReached = false;
+
     public int intervalSearchMS;
 }
