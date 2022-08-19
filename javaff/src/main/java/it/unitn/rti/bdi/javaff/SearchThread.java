@@ -47,11 +47,8 @@ public class SearchThread extends Thread{
     short searchRound = 0;
     FFSearchStatus ffstatus = FFSearchStatus.EHC_SEARCHING;
 
-    // clear search result data
-    this.sharedSearchData.searchResultMsg = new javaff_interfaces.msg.SearchResult();
-    this.sharedSearchData.tspQueue = new ArrayList<TimeStampedPlan>();
-
     this.sharedSearchData.searchResultMsg.setSearchBaseline(SearchDataUtils.getSearchBaseline(this.sharedSearchData.tspQueue));
+    this.sharedSearchData.searchResultMsg.setBasePlanIndex((short)this.sharedSearchData.tspQueue.size());
 
     // we're starting a new search from scratch: we assume agent is not executing now
     // therefore its current state of execution is equivalent to the initial state of search
@@ -62,8 +59,7 @@ public class SearchThread extends Thread{
     while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.searchCurrentState.goalReached()){
 
         this.sharedSearchData.searchLock.lock();
-        System.out.println("ROUND " + searchRound + " starting from state " + this.sharedSearchData.searchCurrentState.toString() + "\tUnique ID=" + (this.sharedSearchData.searchCurrentState.getUniqueId()));
-
+       
         // retrieve preconditions from currentState that are going to apply for found plan
         ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = SearchDataUtils.getCurrentStatePreconditions(this.sharedSearchData.searchCurrentState);
 
@@ -139,7 +135,7 @@ public class SearchThread extends Thread{
               
               if(!killMySelf)//these search results are still valid
                 this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
-                
+                              
               //Log round result
               if(debug){  
                 /*
@@ -170,9 +166,6 @@ public class SearchThread extends Thread{
       if(killMySelf)//if true mspawner thread has set it, put it again to false and terminate your execution
         return;
       
-
-      System.out.println("ROUND " + searchRound + " ending in state " + this.sharedSearchData.searchCurrentState.toString() + "\tUnique ID=" + (this.sharedSearchData.searchCurrentState.getUniqueId()));
-
       searchRound++;
     }
 

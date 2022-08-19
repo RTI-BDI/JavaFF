@@ -10,4 +10,5 @@ uint8 SUCCESS=2
 
 PartialPlan[] plans
 uint8 status
-ExecutionStatus search_baseline
+CommittedStatus search_baseline
+int16  base_plan_index

@@ -295,39 +295,44 @@ public class SearchDataUtils {
     return currCommittedState;
   }
 
-  public static javaff_interfaces.msg.ExecutionStatus getSearchBaseline(ArrayList<TimeStampedPlan> tspQueue)
+  public static javaff_interfaces.msg.CommittedStatus getSearchBaseline(ArrayList<TimeStampedPlan> tspQueue)
   {
-    javaff_interfaces.msg.ExecutionStatus searchBaseline = new javaff_interfaces.msg.ExecutionStatus();
+    javaff_interfaces.msg.CommittedStatus searchBaseline = new javaff_interfaces.msg.CommittedStatus();
     
     // baseline default value, execution not started yet, therefore no valid index of executing action
     searchBaseline.setExecutingPlanIndex((short)-1);
-    searchBaseline.setPddlProblem("");//TODO eval need for pddl problem here
-
-    ArrayList<javaff_interfaces.msg.ActionExecutionStatus> aesList = new ArrayList<>();
-
-    TimeStampedPlan executingTsp = null;
-    short i = 0;
+    
+    int executingTspIndex = -1;
     short successStatus = (new javaff_interfaces.msg.ActionExecutionStatus()).SUCCESS;
-    for(; i<tspQueue.size() && executingTsp == null; i++)
+
+    for(int i = 0; i<tspQueue.size() && executingTspIndex < 0; i++)
       for(TimeStampedAction tsa : tspQueue.get(i).getSortedActions())
+      {  
         if(tsa.status != successStatus)
-          executingTsp = tspQueue.get(i);
-
-    if(executingTsp != null)
-    {
-      searchBaseline.setExecutingPlanIndex(i);
-
-      for(TimeStampedAction tsa : executingTsp.getSortedActions())
-      {
-        javaff_interfaces.msg.ActionExecutionStatus aesMsg = new javaff_interfaces.msg.ActionExecutionStatus();
         {
-          // fill action execution status msg directly by mirroring current and last updated tsp
-          aesMsg.setExecutingAction("(" + tsa.action + ")");
-          aesMsg.setPlannedStartTime(tsa.time.floatValue());
-          aesMsg.setStatus(tsa.status);
+          executingTspIndex = i;
+          break;
         }
-        aesList.add(aesMsg);
       }
+      
+    if(executingTspIndex >= 0)
+    {
+      searchBaseline.setExecutingPlanIndex((short)executingTspIndex);
+      
+      ArrayList<javaff_interfaces.msg.ActionCommittedStatus> acsList = new ArrayList<>();
+
+      for(TimeStampedAction tsa : tspQueue.get(executingTspIndex).getSortedActions())
+      {
+        javaff_interfaces.msg.ActionCommittedStatus acsMsg = new javaff_interfaces.msg.ActionCommittedStatus();
+        {
+          // fill action committed status msg directly by mirroring current and last updated tsp
+          acsMsg.setCommittedAction("(" + tsa.action + ")");
+          acsMsg.setPlannedStartTime(tsa.time.floatValue());
+          acsMsg.setCommitted(tsa.committed);
+        }
+        acsList.add(acsMsg);
+      }
+      searchBaseline.setCommittedActions(acsList);
     }
 
     return searchBaseline;
@@ -344,13 +349,12 @@ public class SearchDataUtils {
   }
 
   /*
-   * Simulate a problem from pddl applying the effects based on the state (i.e. WAITING, RUNNING, EXECUTED) and return the response
+   * Simulate all/all_committed actions in tspQueue starting from currPlanIndex and taking into consideration the current status of each single tsa in the different tsp
   */
-  public static boolean successSimToGoal(String domain, String problem, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue){
+  private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue, boolean justSimCommitted)
+  {
     javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
-    GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
-    TemporalMetricState currentState = JavaFF.computeInitialState(groundProblem);
-    
+    TemporalMetricState currentState = (TemporalMetricState) updCurrentState.clone();
     TimeStampedPlan tsp = tspQueue.get(currPlanIndex);
     TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
     Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
@@ -363,11 +367,11 @@ public class SearchDataUtils {
       TimeStampedAction tsa = tsp.getTimeStampedAction(actionFullName);
       if(tsa == null)
       { 
-        System.out.println("SIMTOGOAL: tsa '" + actionFullName + "' not found!");
-        return false;
+        System.out.println("SimActions " + (justSimCommitted? "JUST_COMMITTED" : "SIM_TO_GOAL") + ": tsa '" + actionFullName + "' not found!");
+        return null;
       }
 
-    
+      
       boolean actionBTStillRunning = tsa.status == aes.RUNNING || tsa.status == aes.RUN_SUC;
       boolean actionBTWaiting = tsa.status == aes.WAITING || tsa.status == aes.RUN_SUC;
 
@@ -394,9 +398,9 @@ public class SearchDataUtils {
             if(! (((Proposition) delProp).getPredicateSymbol().isDomainDefined()))
               ((Proposition) delProp).apply(currentState);
             
-        //System.out.println("Applied non domain defined effects of " + sia);
+        // System.out.println("Applied non domain defined effects of " + sia);
 
-      }else if(actionBTWaiting || actionBTStillRunning && sia instanceof EndInstantAction){
+      }else if( actionBTWaiting && (!justSimCommitted || justSimCommitted && tsa.committed) || actionBTStillRunning && sia instanceof EndInstantAction){
         // apply instant actions iff 
         // not started yet (hence, not even effect at start applied) 
         //  OR 
@@ -405,14 +409,19 @@ public class SearchDataUtils {
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
         else{
-          System.out.println("SIMTOGOAL: sia not applicable: " + sia);
-          return false;
+          System.out.println("SimActions " + (justSimCommitted? "JUST_COMMITTED" : "SIM_TO_GOAL") + ": sia not applicable: " + sia);
+          return null;
         }
 
-        //System.out.println("Applied effects of " + sia);
+        // System.out.println("Applied effects of " + sia);
       }
     }
 
+    if(justSimCommitted)//stop sim here
+      return currentState;
+
+    // sim to goal, taking into consideration all following enqueued plans
+    
     // apply all enqueued tsp here (some might still be missing though: deal with it externally) 
     currPlanIndex++;
     for(; currPlanIndex < tspQueue.size(); currPlanIndex++)
@@ -426,12 +435,30 @@ public class SearchDataUtils {
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
         else
-          return false;
+          return null;
         
-        //System.out.println("Applied effects of " + sia);
+        // System.out.println("Applied effects of " + sia);
       }
     }
 
-    return currentState.goalReached();
+    return currentState;
+  }
+
+  /*
+   * Simulate current state to goal path applying the effects based on the state of the action in the corresponding tsp (i.e. WAITING, RUNNING, EXECUTED) 
+   * and return whether the goal is still achievable in the response
+  */
+  public static boolean successSimToGoal(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue){
+    TemporalMetricState currentState = simActions(updCurrentState, currPlanIndex, tspQueue, false);
+    
+    return (currentState==null)? false : currentState.goalReached();
+  }
+
+  /*
+   * Simulate current state to next committed state path applying the effects based on the state of the action in the corresponding tsp (i.e. WAITING, RUNNING, EXECUTED) 
+   * and return the achieved state (null in case it was not possible to achieve it)
+  */
+  public static TemporalMetricState simCommitted(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue){
+    return simActions(updCurrentState, currPlanIndex, tspQueue, true);
   }
 }
