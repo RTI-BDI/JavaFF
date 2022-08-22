@@ -48,7 +48,7 @@ public abstract class SplitInstantAction extends InstantAction implements Compar
 		if (obj instanceof SplitInstantAction)
 		{
 			SplitInstantAction a = (SplitInstantAction) obj;
-			return (name.equals(a.name) && params.equals(a.params) && this.getClass().equals(a.getClass()));
+			return (name.equals(a.name) && params.equals(a.params) && instanceCounter == a.instanceCounter && this.getClass().equals(a.getClass()));
 		}
 		else return false;
     }

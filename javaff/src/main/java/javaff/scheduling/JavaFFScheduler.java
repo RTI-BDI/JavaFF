@@ -36,6 +36,7 @@ import javaff.data.metric.NamedFunction;
 import javaff.data.metric.MetricSymbolStore;
 import javaff.data.metric.TotalTimeFunction;
 import javaff.data.strips.OperatorName;
+import javaff.data.temporal.SplitInstantAction;
 import javaff.data.temporal.StartInstantAction;
 import javaff.planning.TemporalMetricState;
 
@@ -53,17 +54,27 @@ public class JavaFFScheduler implements Scheduler
 
 	public TimeStampedPlan schedule(TotalOrderPlan top)
 	{
+		// ATTENTION PLEASE: really important to mark down exhaustively diff actions with same signature within the same plan,
+		// otherwise rescheduling won't work!!! Using an instance counter to distinguish and match them appropriately
+
 		HashMap<String, Integer> counters = new HashMap<>();
 		for(Action a : top.getOrderedActions())
 		{
 			int counter = 1;
-			if(!counters.containsKey(a.toString()))
-				counters.put(a.toString(), counter);
-			else{
-				counter = ((Integer)counters.get(a.toString()))+1;
-				counters.put(a.toString(), counter);
+			if(a instanceof SplitInstantAction)
+			{
+				SplitInstantAction sia = (SplitInstantAction) a;
+				if(!counters.containsKey(sia.toStringBase()))
+					counters.put(sia.toStringBase(), counter);
+				else{
+					counter = ((Integer)counters.get(sia.toStringBase()))+1;
+					counters.put(sia.toStringBase(), counter);
+				}
+				
+				sia.instanceCounter = counter; // WITHOUT THIS YOU'RE FU***D
+				sia.parent.startAction.instanceCounter = counter; // WITHOUT THIS YOU'RE FU***D
+				sia.parent.endAction.instanceCounter = counter; // WITHOUT THIS YOU'RE FU***D
 			}
-			a.instanceCounter = counter;
 		}
 
 		PartialOrderPlan pop = GreedyPartialOrderLifter.lift(top, problem);

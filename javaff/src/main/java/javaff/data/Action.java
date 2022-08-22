@@ -55,6 +55,17 @@ public abstract class Action implements Serializable, Cloneable
 		return stringrep;
     }
 
+	public String toStringBase()
+	{
+		String stringrep = name.toString();
+		Iterator i = params.iterator();
+		while (i.hasNext())
+		{
+			stringrep = stringrep + " " +  i.next();
+		}
+		return stringrep;
+	}
+
 	public abstract boolean isApplicable(State s);
 	public abstract void apply(State s);
 	public abstract Set getConditionalPropositions();
@@ -78,6 +89,6 @@ public abstract class Action implements Serializable, Cloneable
     {
 		if(name == null || params == null)
 			System.out.println("");
-        return name.hashCode() ^ params.hashCode();
+        return name.hashCode()*(1+instanceCounter) ^ params.hashCode();
     }
 }
