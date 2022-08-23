@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.HashSet;
 import java.math.BigDecimal;
 
 import javaff.JavaFF;
@@ -12,13 +13,10 @@ import javaff.data.Action;
 import javaff.data.GroundProblem;
 import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
-
 import javaff.data.temporal.SplitInstantAction;
 import javaff.data.temporal.DurativeAction;
-import javaff.planning.TemporalMetricState;
 
-// import java.io.FileOutputStream;
-// import java.io.ObjectOutputStream;
+import javaff.planning.TemporalMetricState;
 
 import it.unitn.rti.bdi.javaff.SharedSearchData;
 import it.unitn.rti.bdi.javaff.SearchDataUtils;
@@ -31,6 +29,7 @@ public class SearchThread extends Thread{
   private boolean debug = false;
   private SharedSearchData sharedSearchData;
   private Publisher<javaff_interfaces.msg.SearchResult> planPublisher;
+  ArrayList<ros2_bdi_interfaces.msg.Belief> previousCommittedTrueBeliefsStart;
 
   public SearchThread(SharedSearchData sharedSearchData, Publisher<javaff_interfaces.msg.SearchResult> planPublisher, boolean debug){
     super();
@@ -55,16 +54,24 @@ public class SearchThread extends Thread{
     // it's going to be updated as soon as the search starts
     this.sharedSearchData.execNextCommittedState = (TemporalMetricState) this.sharedSearchData.searchCurrentState.clone();
     this.sharedSearchData.execNextCommittedState.currInstant = BigDecimal.ZERO;
+    
+    // use in round > i, where i is the first round producing a plan to compute round precondition
+    previousCommittedTrueBeliefsStart = null;
 
     while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.searchCurrentState.goalReached()){
 
         this.sharedSearchData.searchLock.lock();
        
         // retrieve preconditions from currentState that are going to apply for found plan
-        ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = SearchDataUtils.getCurrentStatePreconditions(this.sharedSearchData.searchCurrentState);
-
         ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefsStart = SearchDataUtils.getTrueBeliefs(this.sharedSearchData.searchCurrentState);
-
+        ArrayList<ros2_bdi_interfaces.msg.Belief> filteredTrueBeliefs = SearchDataUtils.filterStatePrecondition(committedTrueBeliefsStart, previousCommittedTrueBeliefsStart);
+        // System.out.println("ROUND " + searchRound + " committedTrueBeliefsStart:");
+        // for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefsStart)
+        //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")) + (b.getPddlType()==b.FUNCTION_TYPE? "\tval=" + b.getValue() : ""));
+        // System.out.println("ROUND " + searchRound + " filtered true beliefs:");
+        // for(ros2_bdi_interfaces.msg.Belief b : filteredTrueBeliefs)
+        //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" "))  + (b.getPddlType()==b.FUNCTION_TYPE? "\tval=" + b.getValue() : ""));
+  
         // move forward with the search for interval search time
         TemporalMetricState goalOrIntermediateState = (ffstatus == FFSearchStatus.EHC_SEARCHING)?
           (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
@@ -99,21 +106,9 @@ public class SearchThread extends Thread{
 
         if(ffstatus != FFSearchStatus.UNSAT){
           if(goalOrIntermediateState != null && !goalOrIntermediateState.getSolution().getActions().isEmpty()){
-            /*
-            try{  
-              // Serializing 'a'
-              FileOutputStream fos
-                  = new FileOutputStream("/home/devis/p"+searchRound+".txt");
-              ObjectOutputStream oos
-                  = new ObjectOutputStream(fos);
-              oos.writeObject(goalOrIntermediateState.getTPSolution());
-            }catch(Exception e){
-              e.printStackTrace();
-            }
-            */
-            ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefsEnd = SearchDataUtils.getTrueBeliefs(goalOrIntermediateState);
-          
+            // update current state
             this.sharedSearchData.searchCurrentState = goalOrIntermediateState;
+
             // build plan string from currentState
             TimeStampedPlan tsp = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState);
             String planString = "";
@@ -126,6 +121,14 @@ public class SearchThread extends Thread{
               
               // note: do not pass search round, as some round can return no result!!!
               short planIndex = (short) this.sharedSearchData.searchResultMsg.getPlans().size();
+              
+              // plan precondition gen.
+              previousCommittedTrueBeliefsStart = committedTrueBeliefsStart;// update all precondition of the current plan (facts true in starting state)
+              ArrayList<ros2_bdi_interfaces.msg.Belief> preconditionBeliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
+              preconditionBeliefs.addAll(filteredTrueBeliefs);
+              preconditionBeliefs.addAll(SearchDataUtils.computeImplicitPreconditions(tsp));
+              ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = SearchDataUtils.buildPreconditions(preconditionBeliefs); // TODO: filter might have some issues AND add first actions preconditions
+              
               javaff_interfaces.msg.PartialPlan newPPlan = SearchDataUtils.buildNewPPlan(planIndex, this.sharedSearchData.fulfillingDesire,
                 planPreconditions, this.sharedSearchData.searchCurrentState, currentPlanMsg);
               
@@ -138,19 +141,6 @@ public class SearchThread extends Thread{
                               
               //Log round result
               if(debug){  
-                /*
-                System.out.println("ROUND " + searchRound + ": start state");
-                for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefsStart)
-                  System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")));
-                
-                System.out.println("ROUND " + searchRound + ": end state");
-                for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefsEnd)
-                  System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")));
-
-                System.out.println("\nplan snap action num: " + this.sharedSearchData.searchCurrentState.getSolution().getActions().size());
-                for(Action sia : ((List<Action>)this.sharedSearchData.searchCurrentState.getTPSolution().getOrderedActions()))
-                  System.out.println(sia.toString());
-                */
                 System.out.println("\nROUND " + (searchRound) + " has produced plan " + planIndex);
                 System.out.println(planString);
                 System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());

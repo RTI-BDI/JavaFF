@@ -5,6 +5,7 @@ import java.util.StringTokenizer;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Iterator;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import javaff.JavaFF;
 import javaff.data.strips.AND;
 import javaff.data.strips.Proposition;
 import javaff.data.metric.ResourceOperator;
+import javaff.data.metric.NamedFunction;
 import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 import javaff.data.temporal.DurativeAction;
@@ -105,6 +107,11 @@ public class SearchDataUtils {
   */
   public static ArrayList<ros2_bdi_interfaces.msg.Belief> getTrueBeliefs(TemporalMetricState state)
   {
+    return getTrueBeliefs(state, false);
+  }
+
+  public static ArrayList<ros2_bdi_interfaces.msg.Belief> getTrueBeliefs(TemporalMetricState state, boolean justPredicates)
+  {
     ArrayList<ros2_bdi_interfaces.msg.Belief> beliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
     for(Proposition p : ((HashSet<Proposition>)state.facts))
       if(p.isDomainDefined())
@@ -116,7 +123,72 @@ public class SearchDataUtils {
         beliefs.add(belief);
       }
     
+    if(!justPredicates)
+      for(NamedFunction nf : ((Hashtable<NamedFunction, BigDecimal>)state.funcValues).keySet())
+        if(nf.getPredicateSymbol().isDomainDefined())
+        {
+          ros2_bdi_interfaces.msg.Belief belief = new ros2_bdi_interfaces.msg.Belief();
+          belief.setName(nf.getPredicateSymbol().getName());
+          belief.setPddlType(belief.FUNCTION_TYPE);
+          belief.setParams(nf.getStringParameters());
+          belief.setValue(((Hashtable<NamedFunction, BigDecimal>)state.funcValues).get(nf).floatValue());
+          beliefs.add(belief);
+        }
+    
     return beliefs;
+  }
+
+  private static boolean findBelief(ros2_bdi_interfaces.msg.Belief belief, ArrayList<ros2_bdi_interfaces.msg.Belief> beliefsList)
+  {
+    // assuming I will not find it in beliefsList
+    boolean beliefFound = false;
+
+    // Looking for it in beliefsList
+    for(ros2_bdi_interfaces.msg.Belief searchBelief : beliefsList) {
+      if(belief.getPddlType() == searchBelief.getPddlType() && belief.getName() == searchBelief.getName())
+      {
+        // Same NAME, same PDDLTYPE
+        if(belief.getParams().size() == searchBelief.getParams().size())
+        {
+          // Same number of arguments
+          if(belief.getPddlType() != belief.FUNCTION_TYPE || belief.getValue() == searchBelief.getValue())
+          {
+            // Same function value (if meaningful)
+            boolean matchingParams = true;
+            for(int i=0; matchingParams && i<belief.getParams().size(); i++)
+              if(!belief.getParams().get(i).equals(searchBelief.getParams().get(i)))
+                matchingParams = false;
+            
+            if(matchingParams)// if also params are matching, belief already found in previousBeliefs -> no reason to go on looking for it
+              return true;
+          }
+        }
+      } 
+    }
+    //End of linear looking for belief in previousBeliefs -> not found it
+    return false;
+  }
+
+  /*
+   * Return the beliefs given by the difference between currentBeliefs/previousBeliefs
+   * return currentBeliefs if previousBeliefs is null
+  */
+  public static ArrayList<ros2_bdi_interfaces.msg.Belief> filterStatePrecondition(
+    ArrayList<ros2_bdi_interfaces.msg.Belief> currentBeliefs, 
+    ArrayList<ros2_bdi_interfaces.msg.Belief> previousBeliefs)
+  {
+    if(previousBeliefs == null)
+      return currentBeliefs;
+
+    // empty list of filtered beliefs
+    ArrayList<ros2_bdi_interfaces.msg.Belief> filteredBeliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
+
+    // for each currentBeliefs which is not in previousBeliefs push it to filteredBeliefs
+    for(ros2_bdi_interfaces.msg.Belief belief : currentBeliefs)
+      if(!findBelief(belief, previousBeliefs))
+        filteredBeliefs.add(belief);
+
+    return filteredBeliefs;    
   }
 
   /*
@@ -125,17 +197,34 @@ public class SearchDataUtils {
   */
   public static ros2_bdi_interfaces.msg.ConditionsDNF getCurrentStatePreconditions(TemporalMetricState state)
   {
+    return buildPreconditions(getTrueBeliefs(state));
+  }
+
+  public static ArrayList<ros2_bdi_interfaces.msg.Belief> computeImplicitPreconditions(TimeStampedPlan tsp)
+  {
+    ArrayList<ros2_bdi_interfaces.msg.Belief> implicitPreconditions = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
+    //TODO AZ da TV: insert function logic in SearchDataUtils so that it can be used in planPreconditions computation
+    
+    
+    //MatrixSTN.EPSILON;
+    return implicitPreconditions;
+  }
+
+  /*
+   * Return a ConditionsDNF msg packing all trueBeliefs in an AND clause
+  */
+  public static ros2_bdi_interfaces.msg.ConditionsDNF buildPreconditions(ArrayList<ros2_bdi_interfaces.msg.Belief> trueBeliefs)
+  {
     ros2_bdi_interfaces.msg.ConditionsDNF preconditions = new ros2_bdi_interfaces.msg.ConditionsDNF();
     ArrayList<ros2_bdi_interfaces.msg.ConditionsConjunction> clauses = new ArrayList<ros2_bdi_interfaces.msg.ConditionsConjunction>();
     ros2_bdi_interfaces.msg.ConditionsConjunction clause = new ros2_bdi_interfaces.msg.ConditionsConjunction();
     ArrayList<ros2_bdi_interfaces.msg.Condition> literals = new ArrayList<ros2_bdi_interfaces.msg.Condition>();
-    
-    ArrayList<ros2_bdi_interfaces.msg.Belief> trueBeliefs = getTrueBeliefs(state);
+
     for(ros2_bdi_interfaces.msg.Belief belief : trueBeliefs)
     {
       ros2_bdi_interfaces.msg.Condition condition = new ros2_bdi_interfaces.msg.Condition();
       condition.setConditionToCheck(belief);
-      condition.setCheck(condition.TRUE_CHECK);
+      condition.setCheck(belief.getPddlType() == belief.PREDICATE_TYPE? condition.TRUE_CHECK : condition.EQUALS_CHECK);
       literals.add(condition);
     }
     clause.setLiterals(literals);
@@ -161,7 +250,7 @@ public class SearchDataUtils {
     target.setPrecondition(planPreconditions);
 
     //retrieve goal value
-    target.setValue(getTrueBeliefs(targetState));
+    target.setValue(getTrueBeliefs(targetState, true));
 
     // set priority and deadline
     target.setPriority(fulfillingDesire.getPriority());
@@ -358,6 +447,9 @@ public class SearchDataUtils {
     TimeStampedPlan tsp = tspQueue.get(currPlanIndex);
     TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
     Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
+    
+    String msgLog = "";
+
     while(itsa.hasNext())
     {
       SplitInstantAction sia = itsa.next();
@@ -367,6 +459,7 @@ public class SearchDataUtils {
       TimeStampedAction tsa = tsp.getTimeStampedAction(actionFullName);
       if(tsa == null)
       { 
+        System.out.println(msgLog);
         System.out.println("SimActions " + (justSimCommitted? "JUST_COMMITTED" : "SIM_TO_GOAL") + ": tsa '" + actionFullName + "' not found!");
         return null;
       }
@@ -398,7 +491,7 @@ public class SearchDataUtils {
             if(! (((Proposition) delProp).getPredicateSymbol().isDomainDefined()))
               ((Proposition) delProp).apply(currentState);
             
-        // System.out.println("Applied non domain defined effects of " + sia);
+        msgLog += ("\nApplied non domain defined effects of " + sia);
 
       }else if( actionBTWaiting && (!justSimCommitted || justSimCommitted && tsa.committed) || actionBTStillRunning && sia instanceof EndInstantAction){
         // apply instant actions iff 
@@ -409,11 +502,12 @@ public class SearchDataUtils {
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
         else{
+          System.out.println(msgLog);
           System.out.println("SimActions " + (justSimCommitted? "JUST_COMMITTED" : "SIM_TO_GOAL") + ": sia not applicable: " + sia);
           return null;
         }
 
-        // System.out.println("Applied effects of " + sia);
+        msgLog += ("\nApplied effects of " + sia);
       }
     }
 
@@ -434,10 +528,13 @@ public class SearchDataUtils {
         SplitInstantAction sia = itsa.next();
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
-        else
+        else{
+          System.out.println(msgLog);
+          System.out.println("SimActions " + (justSimCommitted? "JUST_COMMITTED" : "SIM_TO_GOAL") + ": sia not applicable: " + sia);
           return null;
+        }
         
-        // System.out.println("Applied effects of " + sia);
+        msgLog += ("\nApplied effects of " + sia);
       }
     }
 

@@ -68,8 +68,9 @@ public class JavaFF
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-		 stdBody(750);
-		//testBuildPlan();
+		 stdBody(650);
+		// testBuildPlan();
+		// testHvsL("/home/devis/lp5.txt","/home/devis/hp5.txt");
 		/*
 		for(int i=0; i<512; i++) {
 			generator = new Random();
@@ -77,12 +78,47 @@ public class JavaFF
 		}*/
 	}
 
+	private static void testHvsL(String solFile, String tpSolFile) throws IOException, ClassNotFoundException {
+
+		FileInputStream fis0	= new FileInputStream(solFile);
+		ObjectInputStream ois0 = new ObjectInputStream(fis0);
+		TotalOrderPlan sol0 = (TotalOrderPlan) ois0.readObject(); // down-casting object
+		Set<Action> sol = sol0.getActions();
+
+		FileInputStream fis1	= new FileInputStream(solFile);
+		ObjectInputStream ois1 = new ObjectInputStream(fis1);
+		TotalOrderPlan tpSol1 = (TotalOrderPlan) ois1.readObject(); // down-casting object
+		List<Action> tpSol = tpSol1.getOrderedActions();
+
+		System.out.println("\nPLAN SNAP ACTION found ( from getSolution().getActions() ): " + sol.size());
+		for(Action sia : ((HashSet<Action>)sol))
+			System.out.println(sia.toString());
+
+		System.out.println("\nPLAN SNAP ACTION found ( getTPSolution().getOrderedActions() ): " + tpSol.size());
+		for(Action sia : ((List<Action>)tpSol))
+			System.out.println(sia.toString());
+
+		System.out.println("\nFill empty hashset");
+		HashSet<Action> hashSet = new HashSet<>();
+		for(Action a : tpSol)
+			if(hashSet.contains(a))
+				System.out.println("Contengo già " + a);
+			else
+			{
+				hashSet.add(a);
+				System.out.println("Aggiunto " + a);
+			}
+
+		fis0.close();fis1.close();
+		ois0.close();ois1.close();
+	}
+
 	public static void testBuildPlan() throws IOException, ClassNotFoundException {
 		String domain = "";
 		boolean errorDomain = false;
 
 		try {
-			File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/gripper/gripper-domain.pddl");
+			File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/gripper/gripper-domain_no_fluent_in_german.pddl");
 			Scanner myReader = new Scanner(myObj);
 			while (myReader.hasNextLine()) {
 				domain += myReader.nextLine() + "\n";
@@ -108,6 +144,7 @@ public class JavaFF
 				" )\n" +
 				" ( :init\n" +
 				" \t( upon gripper_a start )\n" +
+				" \t( arm_free gripper_a )\n" +
 				" \t( on box_a1 base_1 base_1 )\n" +
 				" \t( on box_c2 box_a1 base_1 )\n" +
 				" \t( on box_a2 box_c2 base_1 )\n" +
@@ -141,21 +178,9 @@ public class JavaFF
 				" \t( carrier_can_go carrier_a deposit_a )\n" +
 				" \t( carrier_can_go carrier_b deposit_b )\n" +
 				" \t( carrier_can_go carrier_c deposit_c )\n" +
-				" \t( = ( holding_boxes gripper_a ) 0.0000000000 )\n" +
-				" \t( = ( stacked start ) 0.0000000000 )\n" +
-				" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
-				" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
-				" \t( = ( stacked base_2 ) 3.0000000000 )\n" +
-				" \t( = ( stacked base_3 ) 0.0000000000 )\n" +
-				" \t( = ( stacked base_a ) 0.0000000000 )\n" +
-				" \t( = ( stacked base_b ) 0.0000000000 )\n" +
-				" \t( = ( stacked base_c ) 0.0000000000 )\n" +
-				" \t( = ( moving_boxes carrier_a ) 0.0000000000 )\n" +
-				" \t( = ( moving_boxes carrier_b ) 0.0000000000 )\n" +
-				" \t( = ( moving_boxes carrier_c ) 0.0000000000 )\n" +
 				" )\n" +
 				" ( :goal \n" +
-				"    (and (carrier_moving carrier_a box_a2) (carrier_moving carrier_c box_c2)) \n" +
+				"    (and (box_stored box_a2 deposit_a) (box_stored box_c2 deposit_c) (box_stored box_c1 deposit_c)) \n" +
 				" )\n" +
 				")\n";
 
@@ -168,18 +193,50 @@ public class JavaFF
 				System.out.println("\n\nInit State: " + initialState.toString());
 				TemporalMetricState currState = (TemporalMetricState) initialState.clone();
 
-				FileInputStream fis	= new FileInputStream("/home/devis/p0.txt");
-				ObjectInputStream ois = new ObjectInputStream(fis);
-				TotalOrderPlan top = (TotalOrderPlan) ois.readObject(); // down-casting object
-				for(Action a : top.getOrderedActions())
+				FileInputStream fis0	= new FileInputStream("/home/devis/hp0.txt");
+				ObjectInputStream ois0 = new ObjectInputStream(fis0);
+				TotalOrderPlan top0 = (TotalOrderPlan) ois0.readObject(); // down-casting object
+				fis0.close(); ois0.close();
+
+				/*
+				FileInputStream fis2	= new FileInputStream("/home/devis/hp2.txt");
+				ObjectInputStream ois2 = new ObjectInputStream(fis2);
+				TotalOrderPlan top2 = (TotalOrderPlan) ois2.readObject(); // down-casting object
+				fis2.close(); ois2.close();
+				*/
+
+				FileInputStream fis3	= new FileInputStream("/home/devis/hp3.txt");
+				ObjectInputStream ois3 = new ObjectInputStream(fis3);
+				TotalOrderPlan top3 = (TotalOrderPlan) ois3.readObject(); // down-casting object
+				fis3.close(); ois3.close();
+
+				FileInputStream fis4	= new FileInputStream("/home/devis/hp4.txt");
+				ObjectInputStream ois4 = new ObjectInputStream(fis4);
+				TotalOrderPlan top4 = (TotalOrderPlan) ois4.readObject(); // down-casting object
+				fis4.close(); ois4.close();
+
+				FileInputStream fis5	= new FileInputStream("/home/devis/hp5.txt");
+				ObjectInputStream ois5 = new ObjectInputStream(fis5);
+				TotalOrderPlan top5 = (TotalOrderPlan) ois5.readObject(); // down-casting object
+				fis5.close(); ois5.close();
+
+				for(Action a : top0.getOrderedActions())
 					if(a instanceof StartInstantAction)
 						currState = (TemporalMetricState) currState.apply(a);
-				for(Action a : top.getOrderedActions())
+				/*
+				for(Action a : top2.getOrderedActions())
+					if(a instanceof EndInstantAction)
+						currState = (TemporalMetricState) currState.apply(a);
+				 */
+				for(Action a : top3.getOrderedActions())
+					if(a instanceof EndInstantAction)
+						currState = (TemporalMetricState) currState.apply(a);
+				for(Action a : top4.getOrderedActions())
 					if(a instanceof EndInstantAction)
 						currState = (TemporalMetricState) currState.apply(a);
 
 				//check state after sim p0 == 7c1e7dc
-				System.out.println("\n\nAfter sim P0 State: " + currState.toString());
+				System.out.println("\n\nAfter sim P0-P2-P3-P4, State: " + currState.toString());
 
 				//sim rebase
 				groundProblem.initial = currState.facts;
@@ -187,15 +244,13 @@ public class JavaFF
 				groundProblem.functionValues = currState.funcValues;
 				currState.cleanPlanInfo();
 
-				//sim p1
-				fis	= new FileInputStream("/home/devis/p11.txt");
-				ois = new ObjectInputStream(fis);
-				top = (TotalOrderPlan) ois.readObject(); // down-casting object
-				for(Action a : top.getOrderedActions())
+				//sim p5
+				for(Action a : top5.getOrderedActions())
 					currState = (TemporalMetricState) currState.apply(a);
 
-				//check state after p1 == f8a15dea
-				System.out.println("\n\nAfter sim P11 State: " + currState.toString());
+				//check state after p1 == a606d511
+				System.out.println("\n\nAfter sim P5 State: " + currState.toString());
+
 
 				//call buildPlan
 				TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currState);

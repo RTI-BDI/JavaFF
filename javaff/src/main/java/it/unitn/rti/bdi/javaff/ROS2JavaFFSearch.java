@@ -73,26 +73,32 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
         String fullActionNameTimex1000 = aesMsg.getExecutingAction() + ":"+ (int) (aesMsg.getPlannedStartTime()*1000);
         TimeStampedAction tsa = tsp.getTimeStampedAction(fullActionNameTimex1000);
-        if(aesMsg.getStatus() == aesMsg.RUNNING && tsa.status == aesMsg.WAITING && !tsa.committed)
+        if(tsa != null)
         {
-          // System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + planIndex + " is executing");
-          TemporalMetricState nextCommittedState = (this.sharedSearchData.execNextCommittedState.currInstant.compareTo(new BigDecimal(aesMsg.getPlannedStartTime())) < 0)?
-              SearchDataUtils.computeNextCommittedState(
-                this.sharedSearchData.execNextCommittedState, 
-                fullActionNameTimex1000,
-                tsp)
-              :
-              null;
-          if(nextCommittedState != null)
+          if(aesMsg.getStatus() == aesMsg.RUNNING && tsa.status == aesMsg.WAITING && !tsa.committed)
           {
-            this.sharedSearchData.searchLock.lock();
-            this.sharedSearchData.execNextCommittedState = nextCommittedState;
-            this.sharedSearchData.searchLock.unlock();
+            // System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + planIndex + " is executing");
+            TemporalMetricState nextCommittedState = (this.sharedSearchData.execNextCommittedState.currInstant.compareTo(new BigDecimal(aesMsg.getPlannedStartTime())) < 0)?
+                SearchDataUtils.computeNextCommittedState(
+                  this.sharedSearchData.execNextCommittedState, 
+                  fullActionNameTimex1000,
+                  tsp)
+                :
+                null;
+            if(nextCommittedState != null)
+            {
+              this.sharedSearchData.searchLock.lock();
+              this.sharedSearchData.execNextCommittedState = nextCommittedState;
+              this.sharedSearchData.searchLock.unlock();
+            }
           }
+          
+          // update action status in stored tsp
+          tsa.status = aesMsg.getStatus() < tsa.status? tsa.status : aesMsg.getStatus(); // NOTE: first case, msg is old (e.g. receiving RUNNING, when I already know it has finished)
+          
+          // should be replaced by call above
+          // tsp.markExecStatus(aesMsg.getExecutingAction().substring(1,aesMsg.getExecutingAction().length()-1), startTimeBD, aesMsg.getStatus());
         }
-        
-        // update action status in stored tsp
-        tsp.markExecStatus(aesMsg.getExecutingAction().substring(1,aesMsg.getExecutingAction().length()-1), startTimeBD, aesMsg.getStatus());
       }
       
       if(debug)

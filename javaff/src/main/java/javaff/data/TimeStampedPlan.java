@@ -28,6 +28,11 @@
 
 package javaff.data;
 
+import javaff.data.metric.ResourceOperator;
+import javaff.data.strips.AND;
+import javaff.data.strips.NOT;
+import javaff.data.strips.NullEffect;
+import javaff.data.strips.Proposition;
 import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.SplitInstantAction;
 import javaff.scheduling.MatrixSTN;
@@ -123,6 +128,27 @@ public class TimeStampedPlan implements Plan
 	public SortedSet<TimeStampedAction> getSortedActions()
 	{
 		return actions;
+	}
+
+	public void computeImplicitPreconditions(){
+		/*
+		TODO insert function in SearchDataUtils so that it can be used in planPreconditions computation
+		TimeStampedPlan tsp = this;
+		for(TimeStampedAction tsa : tsp.getSortedActions())
+			if(tsa.time > EPSILON)
+				break;
+			else if (tsa.action instanceof DurativeAction){
+				GroundCondition startCondition = ((DurativeAction) tsa.action).startCondition;
+				if (startCondition instanceof BinaryComparator)
+					startCondition = (BinaryComparator) ((BinaryComparator) startCondition).clone();
+				else if (startCondition instanceof AND)
+					startCondition = (AND) ((AND) startCondition).clone();
+				else if (startCondition instanceof Proposition)
+					startCondition = (Proposition) ((Proposition) startCondition).clone();
+				else if (startCondition instanceof TrueCondition)
+					startCondition = TrueCondition.getInstance();
+			}
+		 */
 	}
 
 	public TimeStampedAction getTimeStampedAction(String actionFullName)
