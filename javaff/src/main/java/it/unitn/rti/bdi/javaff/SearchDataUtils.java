@@ -28,6 +28,8 @@ import javaff.scheduling.MatrixSTN;
 
 import javaff.planning.TemporalMetricState;
 
+import it.unitn.rti.bdi.javaff.TimeStampedPlanWithSearchBaseline;
+
 public class SearchDataUtils {
   
   /*
@@ -384,7 +386,7 @@ public class SearchDataUtils {
     return currCommittedState;
   }
 
-  public static javaff_interfaces.msg.CommittedStatus getSearchBaseline(ArrayList<TimeStampedPlan> tspQueue)
+  public static javaff_interfaces.msg.CommittedStatus getSearchBaseline(ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue)
   {
     javaff_interfaces.msg.CommittedStatus searchBaseline = new javaff_interfaces.msg.CommittedStatus();
     
@@ -440,7 +442,7 @@ public class SearchDataUtils {
   /*
    * Simulate all/all_committed actions in tspQueue starting from currPlanIndex and taking into consideration the current status of each single tsa in the different tsp
   */
-  private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue, boolean justSimCommitted)
+  private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, boolean justSimCommitted)
   {
     javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
     TemporalMetricState currentState = (TemporalMetricState) updCurrentState.clone();
@@ -518,7 +520,7 @@ public class SearchDataUtils {
     
     // apply all enqueued tsp here (some might still be missing though: deal with it externally) 
     currPlanIndex++;
-    for(; currPlanIndex < tspQueue.size(); currPlanIndex++)
+    while(currPlanIndex < tspQueue.size() && sameSearchBaseline(tspQueue.get(currPlanIndex-1).searchBaseline, tspQueue.get(currPlanIndex).searchBaseline))
     {
       tsp = tspQueue.get(currPlanIndex);
       orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
@@ -536,6 +538,8 @@ public class SearchDataUtils {
         
         msgLog += ("\nApplied effects of " + sia);
       }
+
+      currPlanIndex++;
     }
 
     return currentState;
@@ -545,7 +549,7 @@ public class SearchDataUtils {
    * Simulate current state to goal path applying the effects based on the state of the action in the corresponding tsp (i.e. WAITING, RUNNING, EXECUTED) 
    * and return whether the goal is still achievable in the response
   */
-  public static boolean successSimToGoal(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue){
+  public static boolean successSimToGoal(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue){
     TemporalMetricState currentState = simActions(updCurrentState, currPlanIndex, tspQueue, false);
     
     return (currentState==null)? false : currentState.goalReached();
@@ -555,7 +559,26 @@ public class SearchDataUtils {
    * Simulate current state to next committed state path applying the effects based on the state of the action in the corresponding tsp (i.e. WAITING, RUNNING, EXECUTED) 
    * and return the achieved state (null in case it was not possible to achieve it)
   */
-  public static TemporalMetricState simCommitted(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlan> tspQueue){
+  public static TemporalMetricState simCommitted(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue){
     return simActions(updCurrentState, currPlanIndex, tspQueue, true);
+  }
+
+
+  public static boolean sameSearchBaseline(javaff_interfaces.msg.CommittedStatus oldSB, javaff_interfaces.msg.CommittedStatus newSB){
+    if(oldSB.getExecutingPlanIndex() != newSB.getExecutingPlanIndex())
+      return false;
+
+    if(oldSB.getCommittedActions().size() != newSB.getCommittedActions().size())
+      return false;
+
+    for(int i=0; i<oldSB.getCommittedActions().size(); i++){
+      javaff_interfaces.msg.ActionCommittedStatus a1 = oldSB.getCommittedActions().get(i);
+      javaff_interfaces.msg.ActionCommittedStatus a2 = newSB.getCommittedActions().get(i);
+      if(a1.getCommittedAction() != a2.getCommittedAction() || a1.getPlannedStartTime() != a2.getPlannedStartTime())
+        return false;
+      if(a1.getCommitted() != a2.getCommitted())
+        return false;
+    }
+    return true;
   }
 }

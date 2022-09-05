@@ -18,6 +18,7 @@ import javaff.data.temporal.DurativeAction;
 
 import javaff.planning.TemporalMetricState;
 
+import it.unitn.rti.bdi.javaff.TimeStampedPlanWithSearchBaseline;
 import it.unitn.rti.bdi.javaff.SharedSearchData;
 import it.unitn.rti.bdi.javaff.SearchDataUtils;
 
@@ -60,94 +61,104 @@ public class SearchThread extends Thread{
 
     while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.searchCurrentState.goalReached()){
 
-        this.sharedSearchData.searchLock.lock();
-       
-        // retrieve preconditions from currentState that are going to apply for found plan
-        ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefsStart = SearchDataUtils.getTrueBeliefs(this.sharedSearchData.searchCurrentState);
-        ArrayList<ros2_bdi_interfaces.msg.Belief> filteredTrueBeliefs = SearchDataUtils.filterStatePrecondition(committedTrueBeliefsStart, previousCommittedTrueBeliefsStart);
-        // System.out.println("ROUND " + searchRound + " committedTrueBeliefsStart:");
-        // for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefsStart)
-        //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")) + (b.getPddlType()==b.FUNCTION_TYPE? "\tval=" + b.getValue() : ""));
-        // System.out.println("ROUND " + searchRound + " filtered true beliefs:");
-        // for(ros2_bdi_interfaces.msg.Belief b : filteredTrueBeliefs)
-        //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" "))  + (b.getPddlType()==b.FUNCTION_TYPE? "\tval=" + b.getValue() : ""));
-  
-        // move forward with the search for interval search time
-        TemporalMetricState goalOrIntermediateState = (ffstatus == FFSearchStatus.EHC_SEARCHING)?
-          (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
-          :
-          (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
+      this.sharedSearchData.searchLock.lock();
 
-        //check whether unsat ~ empty open and search has return null
-        if(ffstatus == FFSearchStatus.EHC_SEARCHING)
+        // check if search result are already outdated, i.e. searchBaseline updated (no p_index == -1), but old wrt. current exec status
+        javaff_interfaces.msg.CommittedStatus currSearchBaseline = this.sharedSearchData.searchResultMsg.getSearchBaseline();
+        if(currSearchBaseline.getExecutingPlanIndex() >= 0 && this.sharedSearchData.executingTspWSB!=null && this.sharedSearchData.executingTspWSB.outdatedSearchBaseline(currSearchBaseline))
+          killMySelf = true;
+
+        if(!killMySelf)
         {
-          ffstatus = (this.sharedSearchData.open.isEmpty() && goalOrIntermediateState == null)? FFSearchStatus.BFS_SEARCHING : FFSearchStatus.EHC_SEARCHING;
-          
-          if(ffstatus == FFSearchStatus.BFS_SEARCHING)//just switched to BFS searching
-          {   
-            // here switch to nextCommittedState to restart search from it and NOT from currentState, otherwise might be too late to find a viable solution
+       
+          // retrieve preconditions from currentState that are going to apply for found plan
+          ArrayList<ros2_bdi_interfaces.msg.Belief> committedTrueBeliefsStart = SearchDataUtils.getTrueBeliefs(this.sharedSearchData.searchCurrentState);
+          ArrayList<ros2_bdi_interfaces.msg.Belief> filteredTrueBeliefs = SearchDataUtils.filterStatePrecondition(committedTrueBeliefsStart, previousCommittedTrueBeliefsStart);
+          // System.out.println("ROUND " + searchRound + " committedTrueBeliefsStart:");
+          // for(ros2_bdi_interfaces.msg.Belief b : committedTrueBeliefsStart)
+          //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" ")) + (b.getPddlType()==b.FUNCTION_TYPE? "\tval=" + b.getValue() : ""));
+          // System.out.println("ROUND " + searchRound + " filtered true beliefs:");
+          // for(ros2_bdi_interfaces.msg.Belief b : filteredTrueBeliefs)
+          //   System.out.println("\t- " + b.getName() + " " + b.getParams().stream().collect(Collectors.joining(" "))  + (b.getPddlType()==b.FUNCTION_TYPE? "\tval=" + b.getValue() : ""));
+    
+          // move forward with the search for interval search time
+          TemporalMetricState goalOrIntermediateState = (ffstatus == FFSearchStatus.EHC_SEARCHING)?
+            (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
+            :
+            (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
+
+          //check whether unsat ~ empty open and search has return null
+          if(ffstatus == FFSearchStatus.EHC_SEARCHING)
+          {
+            ffstatus = (this.sharedSearchData.open.isEmpty() && goalOrIntermediateState == null)? FFSearchStatus.BFS_SEARCHING : FFSearchStatus.EHC_SEARCHING;
             
-            // retrieve last exec committed action and put it as a search baseline, so that scheduler knows
-            this.sharedSearchData.searchResultMsg.setSearchBaseline(SearchDataUtils.getSearchBaseline(this.sharedSearchData.tspQueue));
-            
-            // clear tspqueue index additional plans after currently committed one that are not valid anymore...
-            while(this.sharedSearchData.searchResultMsg.getSearchBaseline().getExecutingPlanIndex() < (this.sharedSearchData.tspQueue.size() - 1)) 
-              this.sharedSearchData.tspQueue.remove(this.sharedSearchData.tspQueue.size() - 1);
-
-            // put next exec committedState as base for the next search iteration
-            this.sharedSearchData.searchCurrentState = this.sharedSearchData.execNextCommittedState;
-
-             // rebase on new search base state for next bfs search iterations
-             JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState, this.sharedSearchData.open, this.sharedSearchData.closed);
-          }
-
-        }else if(ffstatus == FFSearchStatus.BFS_SEARCHING)
-          ffstatus = (this.sharedSearchData.open.isEmpty() && goalOrIntermediateState == null)? FFSearchStatus.UNSAT : FFSearchStatus.EHC_SEARCHING;
-
-        if(ffstatus != FFSearchStatus.UNSAT){
-          if(goalOrIntermediateState != null && !goalOrIntermediateState.getSolution().getActions().isEmpty()){
-            // update current state
-            this.sharedSearchData.searchCurrentState = goalOrIntermediateState;
-
-            // build plan string from currentState
-            TimeStampedPlan tsp = JavaFF.buildPlan(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState);
-            String planString = "";
-            if (tsp != null && tsp.getSortedActions().size()>0) 
-            {
-              this.sharedSearchData.tspQueue.add(tsp);
-              planString = tsp.getPrintablePlan(false);//get plan string
-
-              plansys2_msgs.msg.Plan currentPlanMsg = SearchDataUtils.buildPsys2Plan(tsp);// build plan msg and publish it          
+            if(ffstatus == FFSearchStatus.BFS_SEARCHING)//just switched to BFS searching
+            {   
+              // here switch to nextCommittedState to restart search from it and NOT from currentState, otherwise might be too late to find a viable solution
               
+              // retrieve last exec committed action and put it as a search baseline, so that scheduler knows
+              this.sharedSearchData.searchResultMsg.setSearchBaseline(SearchDataUtils.getSearchBaseline(this.sharedSearchData.tspQueue));
+              
+              // clear tspqueue index additional plans after currently committed one that are not valid anymore...
+              while(this.sharedSearchData.searchResultMsg.getSearchBaseline().getExecutingPlanIndex() < (this.sharedSearchData.tspQueue.size() - 1)) 
+                this.sharedSearchData.tspQueue.remove(this.sharedSearchData.tspQueue.size() - 1);
+
+              // put next exec committedState as base for the next search iteration
+              this.sharedSearchData.searchCurrentState = this.sharedSearchData.execNextCommittedState;
+
+              // rebase on new search base state for next bfs search iterations
+              JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState, this.sharedSearchData.open, this.sharedSearchData.closed);
+            }
+
+          }else if(ffstatus == FFSearchStatus.BFS_SEARCHING)
+            ffstatus = (this.sharedSearchData.open.isEmpty() && goalOrIntermediateState == null)? FFSearchStatus.UNSAT : FFSearchStatus.EHC_SEARCHING;
+
+          if(ffstatus != FFSearchStatus.UNSAT){
+            if(goalOrIntermediateState != null && !goalOrIntermediateState.getSolution().getActions().isEmpty()){
+              // update current state
+              this.sharedSearchData.searchCurrentState = goalOrIntermediateState;
+
               // note: do not pass search round, as some round can return no result!!!
               short planIndex = (short) this.sharedSearchData.searchResultMsg.getPlans().size();
-              
-              // plan precondition gen.
-              previousCommittedTrueBeliefsStart = committedTrueBeliefsStart;// update all precondition of the current plan (facts true in starting state)
-              ArrayList<ros2_bdi_interfaces.msg.Belief> preconditionBeliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
-              preconditionBeliefs.addAll(filteredTrueBeliefs);
-              preconditionBeliefs.addAll(SearchDataUtils.computeImplicitPreconditions(tsp));
-              ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = SearchDataUtils.buildPreconditions(preconditionBeliefs); // TODO: filter might have some issues AND add first actions preconditions
-              
-              javaff_interfaces.msg.PartialPlan newPPlan = SearchDataUtils.buildNewPPlan(planIndex, this.sharedSearchData.fulfillingDesire,
-                planPreconditions, this.sharedSearchData.searchCurrentState, currentPlanMsg);
-              
-              //Search result containing all pplans up to now within this search
-              this.sharedSearchData.searchResultMsg.getPlans().add(newPPlan);
-              this.sharedSearchData.searchResultMsg.setStatus(this.sharedSearchData.searchCurrentState.goalReached()? this.sharedSearchData.searchResultMsg.SUCCESS : this.sharedSearchData.searchResultMsg.SEARCHING);
-              
-              if(!killMySelf)//these search results are still valid
-                this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
-                              
-              //Log round result
-              if(debug){  
-                System.out.println("\nROUND " + (searchRound) + " has produced plan " + planIndex);
-                System.out.println(planString);
-                System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());
+
+              // build plan string from currentState
+              TimeStampedPlan tsp = JavaFF.buildPlan(planIndex, this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState);
+              String planString = "";
+              if (tsp != null && tsp.getSortedActions().size()>0) 
+              {
+                TimeStampedPlanWithSearchBaseline tspWSB = new TimeStampedPlanWithSearchBaseline(tsp, this.sharedSearchData.searchResultMsg.getSearchBaseline());
+                this.sharedSearchData.tspQueue.add(tspWSB);
+                planString = tsp.getPrintablePlan(false);//get plan string
+
+                plansys2_msgs.msg.Plan currentPlanMsg = SearchDataUtils.buildPsys2Plan(tsp);// build plan msg and publish it          
+                
+                // plan precondition gen.
+                previousCommittedTrueBeliefsStart = committedTrueBeliefsStart;// update all precondition of the current plan (facts true in starting state)
+                ArrayList<ros2_bdi_interfaces.msg.Belief> preconditionBeliefs = new ArrayList<ros2_bdi_interfaces.msg.Belief>();
+                preconditionBeliefs.addAll(filteredTrueBeliefs);
+                preconditionBeliefs.addAll(SearchDataUtils.computeImplicitPreconditions(tsp));
+                ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions = SearchDataUtils.buildPreconditions(preconditionBeliefs); // TODO: filter might have some issues AND add first actions preconditions
+                
+                javaff_interfaces.msg.PartialPlan newPPlan = SearchDataUtils.buildNewPPlan(planIndex, this.sharedSearchData.fulfillingDesire,
+                  planPreconditions, this.sharedSearchData.searchCurrentState, currentPlanMsg);
+                
+                //Search result containing all pplans up to now within this search
+                this.sharedSearchData.searchResultMsg.getPlans().add(newPPlan);
+                this.sharedSearchData.searchResultMsg.setStatus(this.sharedSearchData.searchCurrentState.goalReached()? this.sharedSearchData.searchResultMsg.SUCCESS : this.sharedSearchData.searchResultMsg.SEARCHING);
+                
+                if(!killMySelf)//these search results are still valid
+                  this.planPublisher.publish(this.sharedSearchData.searchResultMsg);
+                                
+                //Log round result
+                if(debug){  
+                  System.out.println("\nROUND " + (searchRound) + " has produced plan " + planIndex);
+                  System.out.println(planString);
+                  System.out.println("open.size="+this.sharedSearchData.open.size() + "\t closed.size=" + this.sharedSearchData.closed.size());
+                }
+                
+                // rebase exclusively when plan presents some actions, otherwise next search cycle will start from where it left
+                JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState, this.sharedSearchData.open, this.sharedSearchData.closed);
               }
-              
-              // rebase exclusively when plan presents some actions, otherwise next search cycle will start from where it left
-              JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState, this.sharedSearchData.open, this.sharedSearchData.closed);
             }
           }
         }

@@ -50,7 +50,7 @@ import java.math.BigDecimal;
 public class TimeStampedPlan implements Plan
 {
 	public SortedSet<TimeStampedAction> actions = new TreeSet();
-
+	public short planIndex = -1;
 	public TimeStampedAction addAction(Action a, BigDecimal t)
 	{
 		return addAction(a, t, null);

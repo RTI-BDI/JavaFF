@@ -47,7 +47,6 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       // Compare lastExecStatusUpd with msg to know: which actions have started and which have terminated
       
       short planIndex = msg.getExecutingPlanIndex();
-
       if(this.sharedSearchData.execNextCommittedState != null && lastExecStatusUpd != null)
         if(lastExecStatusUpd.getExecutingPlanIndex() < planIndex)
         {
@@ -55,7 +54,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
           this.sharedSearchData.execNextCommittedState.currInstant = BigDecimal.ZERO;
           
           //make sure that all actions of previous tsp are marked as success and not run_success TODO eval if comm. final SUCC in scheduler 
-          if(lastExecStatusUpd.getExecutingPlanIndex() >= 0)
+          if(lastExecStatusUpd.getExecutingPlanIndex() >= 0 && lastExecStatusUpd.getExecutingPlanIndex() < this.sharedSearchData.tspQueue.size())
           {
             javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
             TimeStampedPlan lastTsp = this.sharedSearchData.tspQueue.get(lastExecStatusUpd.getExecutingPlanIndex());
@@ -64,15 +63,19 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
                 tsa.status = aes.SUCCESS;
           }
         }
+      
+      if(planIndex >= this.sharedSearchData.tspQueue.size())//invalid info corresponding to previous executions
+        return;
 
-      TimeStampedPlan tsp = this.sharedSearchData.tspQueue.get(planIndex); 
+      TimeStampedPlanWithSearchBaseline tspWSB = this.sharedSearchData.tspQueue.get(planIndex); 
+      this.sharedSearchData.executingTspWSB = tspWSB;
       
       for(javaff_interfaces.msg.ActionExecutionStatus aesMsg : msg.getExecutingActions())
       {
         BigDecimal startTimeBD = (new BigDecimal(aesMsg.getPlannedStartTime())).setScale(MatrixSTN.SCALE, MatrixSTN.ROUND);
 
         String fullActionNameTimex1000 = aesMsg.getExecutingAction() + ":"+ (int) (aesMsg.getPlannedStartTime()*1000);
-        TimeStampedAction tsa = tsp.getTimeStampedAction(fullActionNameTimex1000);
+        TimeStampedAction tsa = tspWSB.getTimeStampedAction(fullActionNameTimex1000);
         if(tsa != null)
         {
           if(aesMsg.getStatus() == aesMsg.RUNNING && tsa.status == aesMsg.WAITING && !tsa.committed)
@@ -82,7 +85,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
                 SearchDataUtils.computeNextCommittedState(
                   this.sharedSearchData.execNextCommittedState, 
                   fullActionNameTimex1000,
-                  tsp)
+                  tspWSB)
                 :
                 null;
             if(nextCommittedState != null)
@@ -108,8 +111,10 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
           this.sharedSearchData.tspQueue.get(planIndex).getPrintablePlan(true));
       }
         
-      System.out.println("early abort accepted? " + msg.getEarlyAbortAccepted());
-      if (this.sharedSearchData.goalReached && !msg.getEarlyAbortAccepted())// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
+      System.out.println("sim to goal? " + msg.getSimToGoal());
+
+      //TODO force sim to goal should force its way into brutal replanning
+      if (this.sharedSearchData.goalReached && msg.getSimToGoal() == msg.SIM_TO_GOAL || msg.getSimToGoal() == msg.SIM_TO_GOAL_FORCE_REPLAN)// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
       {
         GroundProblem updGroundProblem = JavaFF.computeGroundProblem(this.domain, msg.getPddlProblem());
         TemporalMetricState updCurrentState = JavaFF.computeInitialState(updGroundProblem);
@@ -120,10 +125,25 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         
         if(!goalStillReachable)
         {
+          if(msg.getSimToGoal() == msg.SIM_TO_GOAL_FORCE_REPLAN)
+          {
+            if(this.searchThread != null && this.searchThread.isAlive())
+            {
+              try{
+                System.out.println("Search thread already up: force replan; waiting for it to stop...");
+                this.searchThread.killMySelf();
+                this.searchThread.join();
+              }catch(InterruptedException ie){
+                System.out.println("Search for a plan has not been started successfully due to an internal error");
+              }
+            }
+          }
+
           if(this.searchThread == null || !this.searchThread.isAlive())
           {
             updCurrentState = SearchDataUtils.simCommitted(updCurrentState, planIndex, this.sharedSearchData.tspQueue);
-            startSearchFromNextCommittedState(updCurrentState);
+            if(updCurrentState != null)//should never happen, if it wasn't for psys2 executor crashing
+              startSearchFromNextCommittedState(updCurrentState);
           }
         }  
       }
@@ -228,7 +248,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
     private void clearSharedSearchResultData(){
         // clear search result data
         this.sharedSearchData.searchResultMsg = new javaff_interfaces.msg.SearchResult();
-        this.sharedSearchData.tspQueue = new ArrayList<TimeStampedPlan>();
+        this.sharedSearchData.tspQueue = new ArrayList<TimeStampedPlanWithSearchBaseline>();
     }
 
     private void startNewSearch(GroundProblem groundProblem, TemporalMetricState initialState, int intervalSearchMS) throws javaff.parser.TokenMgrError, InterruptedException{
@@ -241,6 +261,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.sharedSearchData.searchCurrentState = initialState;
       this.sharedSearchData.goalReached = false;
       this.sharedSearchData.intervalSearchMS = intervalSearchMS > 100? intervalSearchMS : 100;
+      
+      lastExecStatusUpd = null;
 
       // start search thread from initial state and init. search data
       if(this.searchThread == null || !this.searchThread.isAlive()){

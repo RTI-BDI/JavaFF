@@ -122,8 +122,8 @@ public class EnforcedHillClimbingSearch extends Search
 		{
 			State s = removeNext(); // get the next one
 
-			Set<Action> azzzioni = filter.getActions(s);
-			Set<State> successors = s.getNextStates(azzzioni); // and find its neighbourhood
+			Set<Action> actions = filter.getActions(s);
+			Set<State> successors = s.getNextStates(actions); // and find its neighbourhood
 
 			for (State succ : successors) {
 
@@ -133,6 +133,7 @@ public class EnforcedHillClimbingSearch extends Search
 					{
 						bestHValueNoOpenAction = tms.getHValue();
 						bestIntermediateState = tms;
+						System.out.println("Found better tms: plan.size = " + tms.getSolution().getActions().size() + ", h = " + bestHValueNoOpenAction);
 					}
 
 					if (tms.goalReached()) { // if we've found a goal state - return it as the solution

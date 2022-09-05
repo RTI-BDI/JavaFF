@@ -253,7 +253,7 @@ public class JavaFF
 
 
 				//call buildPlan
-				TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currState);
+				TimeStampedPlan tsp = JavaFF.buildPlan((short) 5, groundProblem, currState);
 				System.out.println(tsp.getPrintablePlan(false));
 			}
 		}
@@ -337,7 +337,10 @@ public class JavaFF
 					" \t( = ( moving_boxes carrier_c ) 0.0000000000 )\n" +
 					" )\n" +
 					" ( :goal \n" +
-					"    (and (carrier_moving carrier_a box_a2) (carrier_moving carrier_c box_c2)) \n" +
+					"    (and " +
+							"\t\t(carrier_moving carrier_a box_a2) \n" +
+							"\t\t(carrier_moving carrier_c box_c2) \n" +
+						")\n" +
 					" )\n" +
 					")\n";
 
@@ -488,6 +491,7 @@ public class JavaFF
 					TreeSet<State> open = new TreeSet<>(new HValueComparator());
 					Hashtable<Integer, State> closed = new Hashtable<>();
 					int i = 0;
+					short pCounter = 0;
 					while(unsat < 2 && !currentState.goalReached()){
 
 						System.out.println("\n\n ROUND " + (i++));
@@ -513,7 +517,7 @@ public class JavaFF
 						if(unsat < 2 && goalOrIntermediateState != null && advancementMade) {
 							currentState = goalOrIntermediateState;
 							// build plan string from currentState
-							TimeStampedPlan tsp = JavaFF.buildPlan(groundProblem, currentState);
+							TimeStampedPlan tsp = JavaFF.buildPlan(pCounter, groundProblem, currentState);pCounter++;
 							TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
 							Set operators = orderedSplitInstantActions.iterator().next().effect.getOperators();
 							Set addPropositions = orderedSplitInstantActions.iterator().next().effect.getAddPropositions();
@@ -630,7 +634,7 @@ public class JavaFF
 		return null; //no proper sequence to close out all end snap-actions
 	}
 
-	public static TimeStampedPlan buildPlan(GroundProblem ground, TemporalMetricState goalState)
+	public static TimeStampedPlan buildPlan(short planIndex, GroundProblem ground, TemporalMetricState goalState)
 	{
 		String plan = "";
 
@@ -649,6 +653,7 @@ public class JavaFF
 
 		 	Scheduler scheduler = new JavaFFScheduler(ground);
 		 	tsp = scheduler.schedule(top);
+			tsp.planIndex = planIndex;
 		}
 
 		// if (top != null) plan = top.getPrintablePlan();
