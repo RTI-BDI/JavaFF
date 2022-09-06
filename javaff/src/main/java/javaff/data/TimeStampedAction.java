@@ -54,6 +54,11 @@ public class TimeStampedAction implements Comparable
 		return str;
 	}
 
+	public String toStringFullNameTimex1000()
+	{
+		return "("+action+"):"+((int)(time.floatValue()*1000));
+	}
+
 	public String toStringWithExecStatus()
 	{
 		String runningStatus = "";

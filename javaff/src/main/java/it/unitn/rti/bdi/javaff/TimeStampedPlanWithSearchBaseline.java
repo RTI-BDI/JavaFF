@@ -8,12 +8,15 @@ import javaff.data.TimeStampedPlan;
 public class TimeStampedPlanWithSearchBaseline extends TimeStampedPlan{
     
     public javaff_interfaces.msg.CommittedStatus searchBaseline;
+    public short searchID;
 
-    public TimeStampedPlanWithSearchBaseline(TimeStampedPlan tsp, javaff_interfaces.msg.CommittedStatus searchBaseline)
+    public TimeStampedPlanWithSearchBaseline(TimeStampedPlan tsp, javaff_interfaces.msg.CommittedStatus searchBaseline, short searchID)
     {
         this.searchBaseline = searchBaseline;
+        this.planIndex = tsp.planIndex;
         this.actions = new TreeSet<TimeStampedAction>();
         this.actions.addAll(tsp.getSortedActions());
+        this.searchID = searchID;
     }
 
     // compare current execution status of tsp with passed searchBaseline; 
@@ -27,11 +30,16 @@ public class TimeStampedPlanWithSearchBaseline extends TimeStampedPlan{
         for(TimeStampedAction tsa : getSortedActions())
             if(tsa.committed)
             {
+                String tsaFullNameTimex1000 = tsa.toStringFullNameTimex1000();
                 // tsa should be committed in search baseline too, otherwise we've already moved over it
                 for(javaff_interfaces.msg.ActionCommittedStatus acs : searchBaseline.getCommittedActions())
-                    if(tsa.action.toString() == acs.getCommittedAction() && tsa.time.floatValue() == acs.getPlannedStartTime())
+                {
+                    String acsFullNameTimex1000 = acs.getCommittedAction() + ":" + ((int) (acs.getPlannedStartTime()*1000));
+
+                    if(tsaFullNameTimex1000.equals(acsFullNameTimex1000))
                         if(!acs.getCommitted())
                             return true;//outdated search baseline
+                }
             }
 
         return false;

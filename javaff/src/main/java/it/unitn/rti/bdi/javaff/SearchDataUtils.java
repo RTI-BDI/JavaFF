@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 
 import java.math.BigDecimal;
+import static java.lang.Math.max;
 
 import javaff.JavaFF;
 
@@ -386,33 +387,19 @@ public class SearchDataUtils {
     return currCommittedState;
   }
 
-  public static javaff_interfaces.msg.CommittedStatus getSearchBaseline(ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue)
+  public static javaff_interfaces.msg.CommittedStatus getSearchBaseline(TimeStampedPlanWithSearchBaseline executingTspWSB)
   {
     javaff_interfaces.msg.CommittedStatus searchBaseline = new javaff_interfaces.msg.CommittedStatus();
     
     // baseline default value, execution not started yet, therefore no valid index of executing action
     searchBaseline.setExecutingPlanIndex((short)-1);
-    
-    int executingTspIndex = -1;
-    short successStatus = (new javaff_interfaces.msg.ActionExecutionStatus()).SUCCESS;
-
-    for(int i = 0; i<tspQueue.size() && executingTspIndex < 0; i++)
-      for(TimeStampedAction tsa : tspQueue.get(i).getSortedActions())
-      {  
-        if(tsa.status != successStatus)
-        {
-          executingTspIndex = i;
-          break;
-        }
-      }
-      
-    if(executingTspIndex >= 0)
+    if(executingTspWSB != null)
     {
-      searchBaseline.setExecutingPlanIndex((short)executingTspIndex);
+      searchBaseline.setExecutingPlanIndex((short)executingTspWSB.planIndex);
       
       ArrayList<javaff_interfaces.msg.ActionCommittedStatus> acsList = new ArrayList<>();
 
-      for(TimeStampedAction tsa : tspQueue.get(executingTspIndex).getSortedActions())
+      for(TimeStampedAction tsa : executingTspWSB.getSortedActions())
       {
         javaff_interfaces.msg.ActionCommittedStatus acsMsg = new javaff_interfaces.msg.ActionCommittedStatus();
         {
@@ -580,5 +567,34 @@ public class SearchDataUtils {
         return false;
     }
     return true;
+  }
+
+
+  /*
+   * Compute est. deadline of non committed actions in tspQueue starting from tsp in startPlanIndex position
+  */
+  public static float computeNonCommittedPlannedDeadline(ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, short startPlanIndex){
+    if(startPlanIndex >= tspQueue.size())
+      return -1.0f;//error
+    
+    float computedDeadline = 0.0f; // deadline that needs to be returned at the end
+    float planOffset = 0.0f; // plan offset such that if I have P5(seachID: 2)->P6(seachID: 2), deadlines of P6 takes as additive offset computeDeadline for P5
+    float currentSearchID = tspQueue.get(startPlanIndex).searchID;
+    for(short planIndex = startPlanIndex; planIndex < tspQueue.size() && tspQueue.get(planIndex).searchID == currentSearchID; planIndex++)
+    {
+      //iterate over all the tsp, starting from startPlanIndex till reaching the last tsp belonging to the same search results (based on searchID)
+      TimeStampedPlanWithSearchBaseline tspWSB = tspQueue.get(planIndex);
+      float committedOffset = 0.0f; // do not take into consideration time of already committed actions, compute it and remove it as negative offset
+      for(TimeStampedAction tsa : tspWSB.getSortedActions()) // assumption: given ordering, all committed actions are put before non committed ones
+      {
+        if(tsa.committed)
+          committedOffset = Math.max(committedOffset, planOffset + tsa.time.floatValue() + tsa.duration.floatValue());
+        else
+          computedDeadline = Math.max(computedDeadline, planOffset + tsa.time.floatValue() + tsa.duration.floatValue() - committedOffset);
+      }
+      planOffset = computedDeadline;
+    }
+
+    return computedDeadline;
   }
 }
