@@ -52,6 +52,12 @@ public class ROS2JavaFF{
     return debug.equalsIgnoreCase("debug=True");
   }
 
+  private static int retrieveMinCommitSteps(final String[] args){
+    String minCommitSteps = retrieveArgument(args, "@", 3);
+    String steps = minCommitSteps.substring(("min_commit_steps").length()+1);
+    return Integer.parseInt(steps);
+  }
+
   private static String readFile(String filepath) throws FileNotFoundException {
     File myObj = new File(filepath);
     Scanner myReader = new Scanner(myObj);
@@ -122,7 +128,9 @@ public class ROS2JavaFF{
     domain = addFullfilmentPredicates(domain);
     //System.out.println(domain);
     boolean debugActive = retrieveDebug(args);
-    System.out.println("Debug active = \"" + debugActive + "\"");
+    System.out.println("Debug active = " + debugActive);
+    int minCommitSteps = retrieveMinCommitSteps(args);
+    System.out.println("Min commit steps = " + minCommitSteps);
 
     //System.out.println("Loaded domain file: \"" + domain + "\"");
 
@@ -132,7 +140,7 @@ public class ROS2JavaFF{
     MultiThreadedExecutor exec = new MultiThreadedExecutor(2);
     
     ROS2JavaFFServer javaffServerNode = new ROS2JavaFFServer("javaff_server", ns);
-    ROS2JavaFFSearch javaffSearchNode = new ROS2JavaFFSearch("javaff_search", ns, domain, debugActive);
+    ROS2JavaFFSearch javaffSearchNode = new ROS2JavaFFSearch("javaff_search", ns, domain, debugActive, minCommitSteps);
 
     javaffSearchNode.setServerNode(javaffServerNode);
     javaffServerNode.setSearchNode(javaffSearchNode);

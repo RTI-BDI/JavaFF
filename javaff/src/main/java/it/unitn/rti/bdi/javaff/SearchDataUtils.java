@@ -295,10 +295,51 @@ public class SearchDataUtils {
   }
 
   /*
+    Compute max committed number of completed and sequential durative actions (SplitInstantAction start + end) in orderedCommittedSplitInstantActions starting from currIndex
+  */ 
+  private static int computeMaxCommittedSequenceI(ArrayList<SplitInstantAction> orderedCommittedSplitInstantActions, int currIndex){
+    if(currIndex >= orderedCommittedSplitInstantActions.size())//already overflowed arrat
+      return 0;
+
+    SplitInstantAction sia = orderedCommittedSplitInstantActions.get(currIndex);
+
+    if(currIndex == orderedCommittedSplitInstantActions.size() - 1)
+      if(sia instanceof StartInstantAction)
+        return 0; // reached the end of the chain with a StartInstantAction
+      else
+        return 1; // reached the end of the chain with an EndInstantAction -> count this steps
+        
+    else
+      if(sia instanceof StartInstantAction)
+        return 0 + computeMaxCommittedSequenceI(orderedCommittedSplitInstantActions, currIndex + 1);
+      else
+      {
+        int maxStepsAfter = 0;
+        for(int i=currIndex+1; i<orderedCommittedSplitInstantActions.size(); i++)
+        {
+          SplitInstantAction followingSia = orderedCommittedSplitInstantActions.get(i);
+          if(followingSia instanceof StartInstantAction && followingSia.predictedInstant.compareTo(sia.predictedInstant) > 0)
+            maxStepsAfter = Math.max(maxStepsAfter, computeMaxCommittedSequenceI(orderedCommittedSplitInstantActions, i));
+        }
+        return 1 + maxStepsAfter; // count this step and add it to the max number of steps after it
+      }
+  }
+
+  /*
+    Compute max committed number of completed and sequential durative actions (SplitInstantAction start + end) in orderedCommittedSplitInstantActions
+  */ 
+  private static int computeMaxCommittedSequence(ArrayList<SplitInstantAction> orderedCommittedSplitInstantActions){
+    if(orderedCommittedSplitInstantActions.size() == 0)
+      return 0;
+    else
+      return computeMaxCommittedSequenceI(orderedCommittedSplitInstantActions, 0);
+  }
+
+  /*
    * Compute next committed state with no open action based on received notification of started action
    * null if not possible or any errors arise
   */
-  public static TemporalMetricState computeNextCommittedState(TemporalMetricState lastCommittedState, String actionStarted, TimeStampedPlan tsp){
+  public static TemporalMetricState computeNextCommittedState(TemporalMetricState lastCommittedState, String actionStarted, TimeStampedPlan tsp, int minCommitSteps){
 
     //compute action started time and remove parenthesis and time info from its string
     BigDecimal actionStartedTime = BigDecimal.valueOf(Float.parseFloat(actionStarted.substring(actionStarted.lastIndexOf(":")+1))/1000.0f).setScale(MatrixSTN.SCALE,MatrixSTN.ROUND);
@@ -306,10 +347,12 @@ public class SearchDataUtils {
   
     TemporalMetricState currCommittedState = (TemporalMetricState) lastCommittedState.clone();
   
-    //find currTime of execution corresponding to start time of actionStarted
+    // find currTime of execution corresponding to start time of actionStarted
     BigDecimal currTime = BigDecimal.ZERO;
-
+    // all sia in tsp
     TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+    // all sia in tsp which are going to mark as committed in this round
+    ArrayList<SplitInstantAction> orderedCommittedSplitInstantActions = new ArrayList<>();
 
     //Find time stamped action in the timestamped plan and apply its start snap action
     Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
@@ -327,7 +370,8 @@ public class SearchDataUtils {
           if(sia.isApplicable(currCommittedState))
           {
             currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);//apply start instant snap action
-            // System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+            orderedCommittedSplitInstantActions.add(sia);
+            //System.out.println("computeNextCommittedState: " + sia.toString() + " applied");
           }
           else
           {
@@ -347,8 +391,12 @@ public class SearchDataUtils {
     
     // reset iterator to the start because it might be that you have to still apply actions that start at the same time, but which have been put before in the treeset
     itsa = orderedSplitInstantActions.iterator();
+
+    int sequentialCommitCounter = 0; // count max number of sequentially committed actions
+
     // apply all instant snap actions ordered by predicted time that are above the currTime in the simulation and stop as soon as you reach a state with no open actions
-    while(itsa.hasNext() && !currCommittedState.openActions.isEmpty())
+    // and you've applied the min number of sequential steps required by the user (if possible)
+    while(itsa.hasNext() && (sequentialCommitCounter < minCommitSteps || !currCommittedState.openActions.isEmpty()))
     {
       SplitInstantAction sia = itsa.next();
       if(sia.predictedInstant.compareTo(currTime) >= 0)//we can pass by equivalent matches (i.e. two actions starting at the same time)
@@ -359,11 +407,15 @@ public class SearchDataUtils {
           if(sia.isApplicable(currCommittedState))
           {
             currCommittedState = (TemporalMetricState) currCommittedState.apply(sia);
-            // System.out.println("COMPUTING nextCommittedState: " + sia.toString() + " applied");
+            orderedCommittedSplitInstantActions.add(sia);
+            //System.out.println("computeNextCommittedState: " + sia.toString() + " applied");
             if(sia instanceof EndInstantAction)
             {
               //mark the timestamped action in the tsp as committed for execution
               tsp.markCommitted(sia.parent, sia.parent.startAction.predictedInstant);
+              
+              sequentialCommitCounter = computeMaxCommittedSequence(orderedCommittedSplitInstantActions);
+              //System.out.println("computeNextCommittedState: max committed sequence up to now: " + sequentialCommitCounter + "; striving for " + minCommitSteps);
             }
           }
           else

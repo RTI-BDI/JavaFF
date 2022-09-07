@@ -41,6 +41,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private boolean debug;
 
+    private int minCommitSteps;
+
     private javaff_interfaces.msg.ExecutionStatus lastExecStatusUpd;
 
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
@@ -88,7 +90,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
                 SearchDataUtils.computeNextCommittedState(
                   this.sharedSearchData.execNextCommittedState, 
                   fullActionNameTimex1000,
-                  this.sharedSearchData.executingTspWSB)
+                  this.sharedSearchData.executingTspWSB,
+                  this.minCommitSteps)
                 :
                 null;
             if(nextCommittedState != null)
@@ -176,10 +179,11 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       lastExecStatusUpd = msg;//store last upd
     }
 
-    public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug) {
+    public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug, int minCommitSteps) {
       super(name, namespace);
       this.domain = domain;
       this.debug = debug;
+      this.minCommitSteps = minCommitSteps;
 
       this.sharedSearchData = new SharedSearchData();
       

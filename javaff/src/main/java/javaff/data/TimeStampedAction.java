@@ -28,6 +28,8 @@
 
 package javaff.data;
 
+import javaff.data.temporal.DurativeAction;
+
 import java.math.BigDecimal;
 
 public class TimeStampedAction implements Comparable
@@ -84,6 +86,11 @@ public class TimeStampedAction implements Comparable
 				"\t" + (committed? "COMMIT" : "NO_COM") +
 			"\t" + time +": ("+action+")";
 		if (duration != null) str += " ["+duration+"]";
+		if(action instanceof DurativeAction)
+		{
+			DurativeAction da = (DurativeAction) action;
+			str += " interval:[" + da.startAction.predictedInstant + ":" + da.endAction.predictedInstant +"]";
+		}
 		return str;
 	}
 
