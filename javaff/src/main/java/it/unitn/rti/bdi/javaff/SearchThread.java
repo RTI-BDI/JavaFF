@@ -74,6 +74,8 @@ public class SearchThread extends Thread{
     // use in round > i, where i is the first round producing a plan to compute round precondition
     previousCommittedTrueBeliefsStart = null;
 
+    int consecutiveEmptySearchRounds = 0;
+
     while(ffstatus != FFSearchStatus.UNSAT && !this.sharedSearchData.searchCurrentState.goalReached()){
 
       this.sharedSearchData.searchLock.lock();
@@ -102,9 +104,9 @@ public class SearchThread extends Thread{
     
           // move forward with the search for interval search time
           TemporalMetricState goalOrIntermediateState = (ffstatus == FFSearchStatus.EHC_SEARCHING)?
-            (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
+            (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.searchParams.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
             :
-            (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
+            (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.searchParams.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
 
           //check whether unsat ~ empty open and search has return null
           if(ffstatus == FFSearchStatus.EHC_SEARCHING)
@@ -134,6 +136,9 @@ public class SearchThread extends Thread{
 
           if(ffstatus != FFSearchStatus.UNSAT){
             if(goalOrIntermediateState != null && !goalOrIntermediateState.getSolution().getActions().isEmpty()){
+              
+              consecutiveEmptySearchRounds = 0;
+
               //System.out.println(tBellog);
               // update current state
               this.sharedSearchData.searchCurrentState = goalOrIntermediateState;
@@ -179,11 +184,20 @@ public class SearchThread extends Thread{
                 // rebase exclusively when plan presents some actions, otherwise next search cycle will start from where it left
                 JavaFF.rebaseOnCurrentState(this.sharedSearchData.groundProblem, this.sharedSearchData.searchCurrentState, this.sharedSearchData.open, this.sharedSearchData.closed);
               }
+            } else {
+              consecutiveEmptySearchRounds++;//empty search round counter
             }
           }
         }
         
       this.sharedSearchData.searchLock.unlock();
+      
+      if(consecutiveEmptySearchRounds == this.sharedSearchData.searchParams.maxEmptySearchIntervals)
+      {  
+        System.out.println(prefix + ": too many consecutive empty search rounds: considering problem UNSAT");
+        ffstatus = FFSearchStatus.UNSAT;
+      }
+
       if(killMySelf)//if true mspawner thread has set it, put it again to false and terminate your execution
       {
         System.out.println(prefix + ": good moment for a suicide attempt ;-)");

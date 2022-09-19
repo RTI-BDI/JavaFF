@@ -4,6 +4,8 @@ import org.ros2.rcljava.node.BaseComposableNode;
 import org.ros2.rcljava.service.RMWRequestId;
 import org.ros2.rcljava.service.Service;
 
+import it.unitn.rti.bdi.javaff.SearchParams;
+
 public class ROS2JavaFFServer extends BaseComposableNode{
     
     // Sibling node carrying on planning search tasks
@@ -68,7 +70,8 @@ public class ROS2JavaFFServer extends BaseComposableNode{
         final javaff_interfaces.srv.JavaFFPlan_Request request,
         final javaff_interfaces.srv.JavaFFPlan_Response response){
 
-        OperationResult startSearchStatus = searchNode.startSearch(request.getFulfillingDesire(), request.getProblem(), request.getSearchInterval());
+        OperationResult startSearchStatus = searchNode.startSearch(request.getFulfillingDesire(), request.getProblem(), 
+            new SearchParams(request.getSearchInterval(), request.getMaxEmptySearchIntervals()));
 
         //get meaningful boolean from previous call
         response.setAccepted(startSearchStatus.result);

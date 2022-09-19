@@ -18,6 +18,7 @@ import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 import javaff.scheduling.MatrixSTN;
 
+import it.unitn.rti.bdi.javaff.SearchParams;
 import it.unitn.rti.bdi.javaff.SharedSearchData;
 import it.unitn.rti.bdi.javaff.SearchDataUtils;
 import it.unitn.rti.bdi.javaff.SearchThread;
@@ -34,6 +35,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
     private SharedSearchData sharedSearchData;
 
     private Publisher<javaff_interfaces.msg.SearchResult> planPublisher;
+
+    private Publisher<javaff_interfaces.msg.CommittedStatus> planCommittedStatusPublisher;
 
     private Subscription<javaff_interfaces.msg.ExecutionStatus> execStatusSubscriber;
 
@@ -116,6 +119,9 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
           planIndex + ":\n" + 
           this.sharedSearchData.tspQueue.get(planIndex).getPrintablePlan(true));
       }
+
+      // publish committed status
+      publishCommittedStatus(this.sharedSearchData.executingTspWSB);
         
       System.out.println("sim to goal? " + msg.getSimToGoal());
 
@@ -179,6 +185,23 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       lastExecStatusUpd = msg;//store last upd
     }
 
+    private void publishCommittedStatus(TimeStampedPlanWithSearchBaseline executingTspWSB){
+      javaff_interfaces.msg.CommittedStatus executingTspCommittedStatus = new javaff_interfaces.msg.CommittedStatus();
+      executingTspCommittedStatus.setExecutingPlanIndex(executingTspWSB.planIndex);
+      ArrayList<javaff_interfaces.msg.ActionCommittedStatus> actionsCommittedStatus = new ArrayList<javaff_interfaces.msg.ActionCommittedStatus>();
+      for(TimeStampedAction tsa : executingTspWSB.getSortedActions())
+      {
+        javaff_interfaces.msg.ActionCommittedStatus acs = new javaff_interfaces.msg.ActionCommittedStatus();
+        acs.setCommittedAction(""+tsa.action);
+        acs.setPlannedStartTime(tsa.time.floatValue());
+        acs.setCommitted(tsa.committed);
+        actionsCommittedStatus.add(acs);
+      }
+
+      executingTspCommittedStatus.setCommittedActions(actionsCommittedStatus);
+      this.planCommittedStatusPublisher.publish(executingTspCommittedStatus);
+    }
+
     public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug, int minCommitSteps) {
       super(name, namespace);
       this.domain = domain;
@@ -189,6 +212,9 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       
       // publish updated search results
       this.planPublisher = this.node.<javaff_interfaces.msg.SearchResult>createPublisher(javaff_interfaces.msg.SearchResult.class, name + "/plan");
+
+      // publish updated search results
+      this.planCommittedStatusPublisher = this.node.<javaff_interfaces.msg.CommittedStatus>createPublisher(javaff_interfaces.msg.CommittedStatus.class, name + "/committed_status");
       
       // receive notification of execution status (i.e. when action x starts, it publishes to this topic)
       this.execStatusSubscriber = this.node.<javaff_interfaces.msg.ExecutionStatus>createSubscription(
@@ -197,7 +223,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         this ::execStatusCallback);
     } 
 
-    public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, int intervalSearchMS){
+    public OperationResult startSearch(ros2_bdi_interfaces.msg.Desire fulfillingDesire, String problem, SearchParams searchParams){
       OperationResult returnObj = new OperationResult(false, "Search for a plan has not been started");
       
       try{
@@ -219,7 +245,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         GroundProblem groundProblem = JavaFF.computeGroundProblem(this.domain, problem);
         TemporalMetricState initialTMS = JavaFF.computeInitialState(groundProblem);
         clearSharedSearchResultData();
-        startNewSearch(groundProblem, initialTMS, intervalSearchMS);
+        startNewSearch(groundProblem, initialTMS, searchParams);
 
         returnObj.result = true;  
         returnObj.msg = "Search for a plan has been started successfully";
@@ -251,7 +277,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         GroundProblem groundProblem = JavaFF.computeGroundProblem(this.domain, newStatePddlProblem);
         TemporalMetricState initialTMS = JavaFF.computeInitialState(groundProblem);
         clearSharedSearchResultData();
-        startNewSearch(groundProblem, initialTMS, this.sharedSearchData.intervalSearchMS);
+        startNewSearch(groundProblem, initialTMS, this.sharedSearchData.searchParams);
         returnObj.result = true;  
         returnObj.msg = "Search for an updated plan has been restarted successfully";
 
@@ -281,11 +307,11 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         this.sharedSearchData.executingTspWSB = null;
     }
 
-    private void startNewSearch(GroundProblem groundProblem, TemporalMetricState initialState, int intervalSearchMS) throws javaff.parser.TokenMgrError, InterruptedException{
-      startNewSearch(groundProblem, initialState, intervalSearchMS, false);
+    private void startNewSearch(GroundProblem groundProblem, TemporalMetricState initialState, SearchParams searchParams) throws javaff.parser.TokenMgrError, InterruptedException{
+      startNewSearch(groundProblem, initialState, searchParams, false);
     }
 
-    private void startNewSearch(GroundProblem groundProblem, TemporalMetricState initialState, int intervalSearchMS, boolean lookForImprovedSolutions) throws javaff.parser.TokenMgrError, InterruptedException{
+    private void startNewSearch(GroundProblem groundProblem, TemporalMetricState initialState, SearchParams searchParams, boolean lookForImprovedSolutions) throws javaff.parser.TokenMgrError, InterruptedException{
       
       this.sharedSearchData.open = new TreeSet<>(new HValueComparator());
       this.sharedSearchData.closed = new Hashtable<>();
@@ -294,7 +320,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.sharedSearchData.groundProblem = groundProblem;
       this.sharedSearchData.searchCurrentState = initialState;
       this.sharedSearchData.goalReached = lookForImprovedSolutions? this.sharedSearchData.goalReached : false;
-      this.sharedSearchData.intervalSearchMS = intervalSearchMS > 100? intervalSearchMS : 100;
+      this.sharedSearchData.searchParams.intervalSearchMS = searchParams.intervalSearchMS > 100? searchParams.intervalSearchMS : 100;
+      this.sharedSearchData.searchParams.maxEmptySearchIntervals = searchParams.maxEmptySearchIntervals > 0? searchParams.maxEmptySearchIntervals : 1;
       
       lastExecStatusUpd = null;
 
@@ -334,7 +361,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         this.sharedSearchData.groundProblem.state = nextCommittedState;
         this.sharedSearchData.groundProblem.functionValues = nextCommittedState.funcValues;
   
-        startNewSearch(this.sharedSearchData.groundProblem, nextCommittedState, this.sharedSearchData.intervalSearchMS, jumpToBFS);  
+        startNewSearch(this.sharedSearchData.groundProblem, nextCommittedState, this.sharedSearchData.searchParams, jumpToBFS);  
 
       }catch(javaff.parser.TokenMgrError mgrError){
         String msgError = mgrError.toString();

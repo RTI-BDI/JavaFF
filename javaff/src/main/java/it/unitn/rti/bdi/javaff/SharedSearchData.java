@@ -12,6 +12,7 @@ import javaff.planning.State;
 import javaff.planning.TemporalMetricState;
 import javaff.search.HValueComparator;
 
+import it.unitn.rti.bdi.javaff.SearchParams;
 import it.unitn.rti.bdi.javaff.TimeStampedPlanWithSearchBaseline;
 
 // Search data shared among ROS2JavaFFSearch and SearchThread running instance
@@ -31,5 +32,5 @@ public class SharedSearchData {
     public ReentrantLock searchLock = new ReentrantLock(true);
     public boolean goalReached = false;
 
-    public int intervalSearchMS;
+    public SearchParams searchParams = new SearchParams(500, 16);
 }
