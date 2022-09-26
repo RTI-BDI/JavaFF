@@ -54,7 +54,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       // Compare lastExecStatusUpd with msg to know: which actions have started and which have terminated
       
       short planIndex = msg.getExecutingPlanIndex();
-      if(planIndex >= this.sharedSearchData.tspQueue.size())//invalid info corresponding to previous executions
+      if(planIndex < 0 || planIndex >= this.sharedSearchData.tspQueue.size())//invalid info corresponding to aborted or previous executions
         return;
 
       if(this.sharedSearchData.execNextCommittedState != null && lastExecStatusUpd != null)

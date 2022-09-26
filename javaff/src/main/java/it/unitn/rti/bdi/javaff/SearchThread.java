@@ -224,7 +224,7 @@ public class SearchThread extends Thread{
 
       if(!lookForImprovedSolutions)
         this.sharedSearchData.goalReached = goalReached;
-      else if(goalReached)
+      else if(goalReached && this.sharedSearchData.executingTspWSB != null)
       {
         //I was looking for an improved solution and I might have found one... (I need to compare planned duration before publishing the results)
         
