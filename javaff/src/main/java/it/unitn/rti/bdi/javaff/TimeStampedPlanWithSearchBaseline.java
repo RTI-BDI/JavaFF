@@ -5,6 +5,8 @@ import java.util.TreeSet;
 import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 
+import it.unitn.rti.bdi.javaff.SearchDataUtils;
+
 public class TimeStampedPlanWithSearchBaseline extends TimeStampedPlan{
     
     public javaff_interfaces.msg.CommittedStatus searchBaseline;
@@ -24,7 +26,10 @@ public class TimeStampedPlanWithSearchBaseline extends TimeStampedPlan{
     // (outdated means that we've already move over the threshold of committed actions)
     public boolean outdatedSearchBaseline(javaff_interfaces.msg.CommittedStatus searchBaseline)
     {
-        if(this.planIndex > searchBaseline.getExecutingPlanIndex())
+        if(SearchDataUtils.sameSearchBaseline(this.searchBaseline, searchBaseline))//the same as the current plan
+            return false;
+        
+        else if(this.planIndex > searchBaseline.getExecutingPlanIndex())
             return true;
 
         for(TimeStampedAction tsa : getSortedActions())

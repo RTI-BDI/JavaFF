@@ -139,7 +139,6 @@ public class BestFirstSearch extends Search
 		}
 
 
-		System.out.println("Open size = " + open.size());
 		if(open.isEmpty())// no reason to move forward: unsat with EHC
 		{
 			return null;

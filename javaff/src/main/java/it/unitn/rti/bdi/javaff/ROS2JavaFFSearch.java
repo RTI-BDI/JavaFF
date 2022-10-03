@@ -57,11 +57,11 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       if(planIndex < 0 || planIndex >= this.sharedSearchData.tspQueue.size())//invalid info corresponding to aborted or previous executions
         return;
 
-      if(this.sharedSearchData.execNextCommittedState != null && lastExecStatusUpd != null)
+      if(this.sharedSearchData.nextCommittedState != null && lastExecStatusUpd != null)
         if(lastExecStatusUpd.getExecutingPlanIndex() < planIndex)
         {
           //reset to zero when new plan starts
-          this.sharedSearchData.execNextCommittedState.currInstant = BigDecimal.ZERO;
+          this.sharedSearchData.nextCommittedState.currInstant = BigDecimal.ZERO;
           
           //make sure that all actions of previous tsp are marked as success and not run_success TODO eval if comm. final SUCC in scheduler 
           if(lastExecStatusUpd.getExecutingPlanIndex() >= 0 && lastExecStatusUpd.getExecutingPlanIndex() < this.sharedSearchData.tspQueue.size())
@@ -89,9 +89,9 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
           if(aesMsg.getStatus() == aesMsg.RUNNING && tsa.status == aesMsg.WAITING && !tsa.committed)
           {
             // System.out.println("I heard: action '" + fullActionNameTimex1000 +"' of plan with i = " + planIndex + " is executing");
-            TemporalMetricState nextCommittedState = (this.sharedSearchData.execNextCommittedState.currInstant.compareTo(new BigDecimal(aesMsg.getPlannedStartTime())) < 0)?
+            TemporalMetricState nextCommittedState = (this.sharedSearchData.nextCommittedState.currInstant.compareTo(new BigDecimal(aesMsg.getPlannedStartTime())) < 0)?
                 SearchDataUtils.computeNextCommittedState(
-                  this.sharedSearchData.execNextCommittedState, 
+                  this.sharedSearchData.nextCommittedState, 
                   fullActionNameTimex1000,
                   this.sharedSearchData.executingTspWSB,
                   this.minCommitSteps)
@@ -100,16 +100,13 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
             if(nextCommittedState != null)
             {
               this.sharedSearchData.searchLock.lock();
-              this.sharedSearchData.execNextCommittedState = nextCommittedState;
+              this.sharedSearchData.nextCommittedState = nextCommittedState;
               this.sharedSearchData.searchLock.unlock();
             }
           }
           
           // update action status in stored tsp
           tsa.status = aesMsg.getStatus() < tsa.status? tsa.status : aesMsg.getStatus(); // NOTE: first case, msg is old (e.g. receiving RUNNING, when I already know it has finished)
-          
-          // should be replaced by call above
-          // tsp.markExecStatus(aesMsg.getExecutingAction().substring(1,aesMsg.getExecutingAction().length()-1), startTimeBD, aesMsg.getStatus());
         }
       }
       
@@ -122,64 +119,74 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
       // publish committed status
       publishCommittedStatus(this.sharedSearchData.executingTspWSB);
-        
-      System.out.println("sim to goal? " + msg.getSimToGoal());
+      
+      
+      GroundProblem updGroundProblem = JavaFF.computeGroundProblem(this.domain, msg.getPddlProblem());
+      TemporalMetricState updCurrentState = JavaFF.computeInitialState(updGroundProblem);
+      updCurrentState = SearchDataUtils.simCommitted(updCurrentState, planIndex, this.sharedSearchData.tspQueue);
+      this.sharedSearchData.actualNextCommittedState = updCurrentState;
 
-      //TODO force sim to goal should force its way into brutal replanning
-      if (this.sharedSearchData.goalReached && msg.getSimToGoal() == msg.SIM_TO_GOAL || msg.getSimToGoal() == msg.SIM_TO_GOAL_FORCE_REPLAN)// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
+      if(this.sharedSearchData.actualNextCommittedState == null)
+        System.out.println("Committed actions, therefore current plan execution doomed to fail!!");
+
+      else if(msg.getNotificationReason() == msg.NEW_ACTION_STARTED || msg.getNotificationReason() == msg.GOAL_BOOST) // it's not valuable to start a search thread looking for alternative/improved solutions, if I just received a diff. type of notification (such as action finished, because results can become obsolete very quickly)
       {
-        GroundProblem updGroundProblem = JavaFF.computeGroundProblem(this.domain, msg.getPddlProblem());
-        TemporalMetricState updCurrentState = JavaFF.computeInitialState(updGroundProblem);
+        System.out.println("sim to goal? " + msg.getSimToGoal());
+        if (msg.getNotificationReason() == msg.GOAL_BOOST)
+          System.out.println("New BOOSTED goal: " + msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("goal")));
 
-        boolean goalStillReachable = SearchDataUtils.successSimToGoal(updCurrentState, planIndex, this.sharedSearchData.tspQueue);
-        // System.out.println(msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("init"), msg.getPddlProblem().indexOf("goal")));
-        System.out.println("Sim: " + goalStillReachable);    
-        
-        if(!goalStillReachable)
+        // force sim to goal should force its way into brutal replanning
+        if (this.sharedSearchData.goalReached && msg.getSimToGoal() == msg.SIM_TO_GOAL || msg.getSimToGoal() == msg.SIM_TO_GOAL_FORCE_REPLAN)// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
         {
-          if(this.searchThreadBFS != null && this.searchThreadBFS.isAlive())
+          TemporalMetricState updCurrStateGoalSim = JavaFF.computeInitialState(updGroundProblem);
+          boolean goalStillReachable = msg.getSimToGoal() != msg.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToGoal(updCurrStateGoalSim, planIndex, this.sharedSearchData.tspQueue);
+          // System.out.println(msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("init"), msg.getPddlProblem().indexOf("goal")));
+          System.out.println("Sim: " + goalStillReachable);    
+          
+          if(!goalStillReachable)
           {
-            try{
-              System.out.println("Search thread BFS already up: waiting for it to stop...");
-              this.searchThreadBFS.killMySelf();
-              this.searchThreadBFS.join();
-            }catch(InterruptedException ie){
-              System.out.println("Search for a plan has not been started successfully due to an internal error");
-            }
-          }
-
-          if(msg.getSimToGoal() == msg.SIM_TO_GOAL_FORCE_REPLAN)
-          {
-            if(this.searchThread != null && this.searchThread.isAlive())
+            if(this.searchThreadBFS != null && this.searchThreadBFS.isAlive())
             {
               try{
-                System.out.println("Search thread already up: force replan; waiting for it to stop...");
-                this.searchThread.killMySelf();
-                this.searchThread.join();
+                System.out.println("Search thread BFS already up: waiting for it to stop...");
+                this.searchThreadBFS.killMySelf();
+                this.searchThreadBFS.join();
               }catch(InterruptedException ie){
                 System.out.println("Search for a plan has not been started successfully due to an internal error");
               }
             }
+
+            if(msg.getSimToGoal() == msg.SIM_TO_GOAL_FORCE_REPLAN)
+            {
+              if(this.searchThread != null && this.searchThread.isAlive())
+              {
+                try{
+                  System.out.println("Search thread already up: force replan; waiting for it to stop...");
+                  this.searchThread.killMySelf();
+                  this.searchThread.join();
+                }catch(InterruptedException ie){
+                  System.out.println("Search for a plan has not been started successfully due to an internal error");
+                }
+              }
+            }
+            
+            if(this.searchThread == null || !this.searchThread.isAlive())
+            {
+              if(updCurrentState != null) // should never happen, if it wasn't for psys2 executor crashing
+                startSearchFromNextCommittedState(updCurrentState);
+            }
           }
-          
-          if(this.searchThread == null || !this.searchThread.isAlive())
+          else 
           {
-            updCurrentState = SearchDataUtils.simCommitted(updCurrentState, planIndex, this.sharedSearchData.tspQueue);
-            if(updCurrentState != null) // should never happen, if it wasn't for psys2 executor crashing
-              startSearchFromNextCommittedState(updCurrentState);
-          }
+            // Start search thread BFS
+            if(this.searchThreadBFS == null || !this.searchThreadBFS.isAlive())
+            {
+              if(updCurrentState != null) // should never happen, if it wasn't for psys2 executor crashing
+                if(!updCurrentState.goalReached()) // start search for improved solution if you're not already committed to the goal
+                  startSearchFromNextCommittedState(updCurrentState, true);
+            }
+          }  
         }
-        else if(msg.getNotificationReason() == msg.NEW_ACTION_STARTED) // it's not valuable to start a search thread looking for improved solutions, if I just received a diff. type of notification (such as action finished, because results can become obsolete very quickly)
-        {
-          // Start search thread BFS
-          if(this.searchThreadBFS == null || !this.searchThreadBFS.isAlive())
-          {
-            updCurrentState = SearchDataUtils.simCommitted(updCurrentState, planIndex, this.sharedSearchData.tspQueue);
-            if(updCurrentState != null) // should never happen, if it wasn't for psys2 executor crashing
-              if(!updCurrentState.goalReached()) // start search for improved solution if you're not already committed to the goal
-                startSearchFromNextCommittedState(updCurrentState, true);
-          }
-        }  
       }
 
       lastExecStatusUpd = msg;//store last upd

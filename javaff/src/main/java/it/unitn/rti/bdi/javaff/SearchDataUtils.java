@@ -33,6 +33,14 @@ import it.unitn.rti.bdi.javaff.TimeStampedPlanWithSearchBaseline;
 
 public class SearchDataUtils {
   
+  public static void printSearchBaseline(javaff_interfaces.msg.CommittedStatus searchBaseline){
+    System.out.println("SB: executing_plan_index: " + searchBaseline.getExecutingPlanIndex());
+    System.out.println("Committed actions: ");
+    for(javaff_interfaces.msg.ActionCommittedStatus acs : searchBaseline.getCommittedActions())
+      System.out.println(acs.getCommitted() + "\t" + acs.getCommittedAction() + ":" + acs.getPlannedStartTime());
+    
+  }
+
   /*
    * Build from planString a Plansys2 Plan msg containing start time, action & duration for each action to be executed in the plan
    * 
@@ -236,31 +244,33 @@ public class SearchDataUtils {
 
     return preconditions;
   }
+  /*
+   * TODO not in use it now, rest there for future iterations as pplan preconditions
+  */
+  // public static ros2_bdi_interfaces.msg.Desire buildTarget(
+  //     int searchIteration,
+  //     ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions,
+  //     TemporalMetricState targetState,
+  //     ros2_bdi_interfaces.msg.Desire fulfillingDesire,
+  //     float planDeadline){
 
-  public static ros2_bdi_interfaces.msg.Desire buildTarget(
-      int searchIteration,
-      ros2_bdi_interfaces.msg.ConditionsDNF planPreconditions,
-      TemporalMetricState targetState,
-      ros2_bdi_interfaces.msg.Desire fulfillingDesire,
-      float planDeadline){
-
-    ros2_bdi_interfaces.msg.Desire target = new ros2_bdi_interfaces.msg.Desire(); 
+  //   ros2_bdi_interfaces.msg.Desire target = new ros2_bdi_interfaces.msg.Desire(); 
     
-    // name = fulfillingDesire name concat. to reached search iteration
-    target.setName(fulfillingDesire.getName() + searchIteration);
+  //   // name = fulfillingDesire name concat. to reached search iteration
+  //   target.setName(fulfillingDesire.getName() + searchIteration);
 
-    //retrieve preconditions
-    target.setPrecondition(planPreconditions);
+  //   //retrieve preconditions
+  //   target.setPrecondition(planPreconditions);
 
-    //retrieve goal value
-    target.setValue(getTrueBeliefs(targetState, true));
+  //   //retrieve goal value
+  //   target.setValue(getTrueBeliefs(targetState, true));
 
-    // set priority and deadline
-    target.setPriority(fulfillingDesire.getPriority());
-    target.setDeadline(planDeadline);
+  //   // set priority and deadline
+  //   target.setPriority(fulfillingDesire.getPriority());
+  //   target.setDeadline(planDeadline);
     
-    return target;
-  }
+  //   return target;
+  // }
 
   /*
    * Create a msg with newly computed plan (to be updated back again to contain all partially computed plan in the search 
@@ -288,7 +298,8 @@ public class SearchDataUtils {
     if(!newItems.isEmpty()){//found some new item, i.e. a new partial plan to be executed will be added
       newPPlan.getPlan().setPlanIndex(searchIteration);
       newPPlan.getPlan().setItems(newItems);
-      newPPlan.setTarget(buildTarget(searchIteration, planPreconditions, currentState, fulfillingDesire, maxEndTime));
+      //newPPlan.setTarget(buildTarget(searchIteration, planPreconditions, currentState, fulfillingDesire, maxEndTime));
+      newPPlan.setTarget(fulfillingDesire);
     }
 
     return newPPlan;
@@ -481,7 +492,8 @@ public class SearchDataUtils {
   /*
    * Simulate all/all_committed actions in tspQueue starting from currPlanIndex and taking into consideration the current status of each single tsa in the different tsp
   */
-  private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, boolean justSimCommitted)
+  private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, 
+    ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, boolean justSimCommitted)
   {
     javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
     TemporalMetricState currentState = (TemporalMetricState) updCurrentState.clone();
