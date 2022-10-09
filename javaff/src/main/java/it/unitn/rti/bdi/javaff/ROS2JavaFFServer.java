@@ -71,7 +71,7 @@ public class ROS2JavaFFServer extends BaseComposableNode{
         final javaff_interfaces.srv.JavaFFPlan_Response response){
 
         OperationResult startSearchStatus = searchNode.startSearch(request.getFulfillingDesire(), request.getProblem(), 
-            new SearchParams(request.getSearchInterval(), request.getMaxEmptySearchIntervals()));
+            new SearchParams(request.getSearchInterval(), request.getMaxPplanSize(), request.getMaxEmptySearchIntervals()));
 
         //get meaningful boolean from previous call
         response.setAccepted(startSearchStatus.result);

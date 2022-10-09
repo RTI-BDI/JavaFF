@@ -68,7 +68,7 @@ public class JavaFF
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-		 stdBody(650);
+		 stdBody(800, 8);
 		// testBuildPlan();
 		// testHvsL("/home/devis/lp5.txt","/home/devis/hp5.txt");
 		/*
@@ -259,12 +259,12 @@ public class JavaFF
 		}
 	}
 
-	public static void stdBody(int searchInterval) throws IOException {
+	public static void stdBody(int searchInterval, int maxPPlanSize) throws IOException {
 			String domain = "";
 			boolean errorDomain = false;
 
 			try {
-				File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_tests/share/ros2_bdi_tests/pddl/gripper/gripper-domain.pddl");
+				File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_on_litter_world/share/ros2_bdi_on_litter_world/pddl/recycling-agent-domain.pddl");
 				Scanner myReader = new Scanner(myObj);
 			     while (myReader.hasNextLine()) {
 			         domain += myReader.nextLine() + "\n";
@@ -279,213 +279,28 @@ public class JavaFF
 			}
 
 
-			String problem = "( define ( problem problem_1 )\n" +
-					" ( :domain gripper-domain )\n" +
-					" ( :objects\n" +
-					" \tbox_a1 box_a2 box_b1 box_b2 box_c1 box_c2 - box\n" +
-					" \tstart base_1 base_2 base_3 base_a base_b base_c - stackbase\n" +
-					" \tdeposit_a deposit_b deposit_c - deposit\n" +
-					" \tgripper_a - gripper\n" +
-					" \tcarrier_a carrier_b carrier_c - carrier\n" +
-					" )\n" +
-					" ( :init\n" +
-					" \t( upon gripper_a start )\n" +
-					" \t( on box_a1 base_1 base_1 )\n" +
-					" \t( on box_c2 box_a1 base_1 )\n" +
-					" \t( on box_a2 box_c2 base_1 )\n" +
-					" \t( in box_a1 base_1 )\n" +
-					" \t( in box_c2 base_1 )\n" +
-					" \t( in box_a2 base_1 )\n" +
-					" \t( in base_1 base_1 )\n" +
-					" \t( clear box_a2 )\n" +
-					" \t( on box_b1 base_2 base_2 )\n" +
-					" \t( on box_b2 box_b1 base_2 )\n" +
-					" \t( on box_c1 box_b2 base_2 )\n" +
-					" \t( in box_b1 base_2 )\n" +
-					" \t( in box_b2 base_2 )\n" +
-					" \t( in box_c1 base_2 )\n" +
-					" \t( in base_2 base_2 )\n" +
-					" \t( clear box_c1 )\n" +
-					" \t( clear base_3 )\n" +
-					" \t( clear base_c )\n" +
-					" \t( clear base_b )\n" +
-					" \t( clear base_a )\n" +
-					" \t( in base_a base_a )\n" +
-					" \t( in base_b base_b )\n" +
-					" \t( in base_c base_c )\n" +
-					" \t( in base_3 base_3 )\n" +
-					" \t( carrier_in_deposit carrier_a deposit_a )\n" +
-					" \t( carrier_in_deposit carrier_b deposit_b )\n" +
-					" \t( carrier_in_deposit carrier_c deposit_c )\n" +
-					" \t( carrier_can_come carrier_a base_a )\n" +
-					" \t( carrier_can_come carrier_b base_b )\n" +
-					" \t( carrier_can_come carrier_c base_c )\n" +
-					" \t( carrier_can_go carrier_a deposit_a )\n" +
-					" \t( carrier_can_go carrier_b deposit_b )\n" +
-					" \t( carrier_can_go carrier_c deposit_c )\n" +
-					" \t( = ( holding_boxes gripper_a ) 0.0000000000 )\n" +
-					" \t( = ( stacked start ) 0.0000000000 )\n" +
-					" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
-					" \t( = ( stacked base_1 ) 3.0000000000 )\n" +
-					" \t( = ( stacked base_2 ) 3.0000000000 )\n" +
-					" \t( = ( stacked base_3 ) 0.0000000000 )\n" +
-					" \t( = ( stacked base_a ) 0.0000000000 )\n" +
-					" \t( = ( stacked base_b ) 0.0000000000 )\n" +
-					" \t( = ( stacked base_c ) 0.0000000000 )\n" +
-					" \t( = ( moving_boxes carrier_a ) 0.0000000000 )\n" +
-					" \t( = ( moving_boxes carrier_b ) 0.0000000000 )\n" +
-					" \t( = ( moving_boxes carrier_c ) 0.0000000000 )\n" +
-					" )\n" +
-					" ( :goal \n" +
-					"    (and " +
-							"\t\t(carrier_moving carrier_a box_a2) \n" +
-							"\t\t(carrier_moving carrier_c box_c2) \n" +
-						")\n" +
-					" )\n" +
-					")\n";
 
-			/*
-			String problem = "( define ( problem problem_1 )\n" +
-					" ( :domain printing-domain )\n" +
-					" ( :objects\n" +
-					" \tr_a r_b r_c r_d r_e r_f - room\n" +
-					" \th11 h12 h13 h21 h22 h23 h31 h32 h33 h11_21 h13_23 h21_31 h23_33 - hallway_segment\n" +
-					" \td0 d1 d2 d3 - dock\n" +
-					" \tr2 - robot\n" +
-					" \tp1 p2 - printer\n" +
-					" )\n" +
-					" ( :init\n" +
-					"\t(active r2)\n" +
-					"\t(near h31 h32)\n" +
-					"\t(free r_a)\n" +
-					"\t(free r_e)\n" +
-					"\t(near r_e h13_23)\n" +
-					"\t(free h11)\n" +
-					"\t(available p1)\n" +
-					"\t(near h31 h21_31)\n" +
-					"\t(r_docked r2)\n" +
-					"\t(near h11_21 h21)\n" +
-					"\t(free h13_23)\n" +
-					"\t(near r_f h33)\n" +
-					"\t(free r_d)\n" +
-					"\t(free h21)\n" +
-					"\t(near r_d h13)\n" +
-					"\t(near h21_31 h31)\n" +
-					"\t(near h11_21 h11)\n" +
-					"\t(near h23_33 h23)\n" +
-					"\t(d_in d0 r_c)\n" +
-					"\t(r_in r2 r_c)\n" +
-					"\t(near h11 r_a)\n" +
-					"\t(near r_e h23_33)\n" +
-					"\t(near h21 h21_31)\n" +
-					"\t(near h22 h21)\n" +
-					"\t(near h21_31 h21)\n" +
-					"\t(near h13 h13_23)\n" +
-					"\t(near r_c h21_31)\n" +
-					"\t(near h33 h32)\n" +
-					"\t(free r_c)\n" +
-					"\t(d_in d2 r_c)\n" +
-					"\t(near h33 h23_33)\n" +
-					"\t(p_in p2 h32)\n" +
-					"\t(free h31)\n" +
-					"\t(free h32)\n" +
-					"\t(near h13 h12)\n" +
-					"\t(near h23_33 r_e)\n" +
-					"\t(near h11_21 r_b)\n" +
-					"\t(free h23_33)\n" +
-					"\t(free h12)\n" +
-					"\t(near h23 h23_33)\n" +
-					"\t(near h23_33 h33)\n" +
-					"\t(free h33)\n" +
-					"\t(near h13 r_d)\n" +
-					"\t(near r_b h11_21)\n" +
-					"\t(near h12 h13)\n" +
-					"\t(near h33 r_f)\n" +
-					"\t(near h32 h31)\n" +
-					"\t(near h13_23 h13)\n" +
-					"\t(d_in d3 r_c)\n" +
-					"\t(near h12 h11)\n" +
-					"\t(near h23 h22)\n" +
-					"\t(near h13_23 h23)\n" +
-					"\t(free r_b)\n" +
-					"\t(free h21_31)\n" +
-					"\t(p_in p1 h12)\n" +
-					"\t(near r_a h11)\n" +
-					"\t(near h23 h13_23)\n" +
-					"\t(free r_f)\n" +
-					"\t(near h21_31 r_c)\n" +
-					"\t(free h23)\n" +
-					"\t(d_in d1 r_c)\n" +
-					"\t(near h32 h33)\n" +
-					"\t(near h21 h22)\n" +
-					"\t(near h11 h11_21)\n" +
-					"\t(near h13_23 r_e)\n" +
-					"\t(free h11_21)\n" +
-					"\t(near h11 h12)\n" +
-					"\t(near h21 h11_21)\n" +
-					"\t(near h22 h23)\n"+
-					"\t(= (battery_charge r2) 85)\n"+
-					" )\n" +
-					" ( :goal\n" +
-					" \t( and\n" +
-					" \t\t( printed_docs_left_in r2 r_e )\n" +
-					" \t)\n" +
-					" )\n" +
-					"(:metric maximize (+ (battery_charge r2) 0))\n" +
-					" )";
-			*/
-			/*
-			String problem = "(define (problem problem_1)\n" +
-					"\t(:domain cleaner-domain)\n" +
-					"\t(:objects\n" +
-					"\t\tcleaner - robot\n" +
-					"\t\tpluto - void\n" +
-					"\t\tdock - waypoint\n" +
-					"\t\tkitchen - waypoint\n" +
-					"\t\tbedroom - waypoint\n" +
-					"\t\tbathroom - waypoint)\n" +
-					"\t(:init\n" +
-					"\t\t(recharging_station dock)\n" +
-					"\t\t(workfree cleaner)\n" +
-					"\t\t(in cleaner dock)\n" +
-					"\t\t(pred_a pluto)\n" +
-					"\t\t(= (battery_charge cleaner) 90)\n" +
-					"\t\t)\n" +
-					"\t(:goal \n" +
-					"\t\t(and\n" +
-					"\t\t\t(cleaned dock)\n" +
-					"\t\t\t(cleaned kitchen)\n" +
-					"\t\t\t(in cleaner dock)\n" +
-					"\t\t\t(cleaned bedroom)\n" +
-					"\t\t\t(cleaned bathroom)\n" +
-					"\t\t)\n" +
-					"\t)\n"+
-					")";
-			*/
 			boolean errorProblem = false;
+			String problem = "";
+			try {
+				File myObj = new File("/home/devis/ros2_ws/install/ros2_bdi_on_litter_world/share/ros2_bdi_on_litter_world/pddl/recycling-agent-problem.pddl");
+				Scanner myReader = new Scanner(myObj);
+				while (myReader.hasNextLine()) {
+					problem += myReader.nextLine() + "\n";
+				}
+				myReader.close();
+				System.out.println("\n\nPROBLEM:\n" + problem);
 
-			//try {
-			//	File myObj = new File("/home/devis/Documents/pddl/printing/problem.pddl");
-			//	Scanner myReader = new Scanner(myObj);
-			//	while (myReader.hasNextLine()) {
-			//		problem += myReader.nextLine() + "\n";
-			//	}
-			//	myReader.close();
-			//	System.out.println("\n\nPROBLEM:\n" + problem);
-
-			//} catch (FileNotFoundException e) {
-			//	errorProblem = true;
-			//	System.out.println("An error occurred while reading problem file.");
-			//	e.printStackTrace();
-			//}
+			} catch (FileNotFoundException e) {
+				errorProblem = true;
+				System.out.println("An error occurred while reading problem file.");
+				e.printStackTrace();
+			}
 			if(!errorDomain && !errorProblem){
 				GroundProblem groundProblem = JavaFF.computeGroundProblem(domain, problem);
 				if(groundProblem != null)
 				{
-					//System.out.println("\n[1]Ground problem info:");
-					//System.out.println("facts: " + groundProblem.initial.size());
-					//for(Proposition f : (HashSet<Proposition>)groundProblem.initial)
-					//	System.out.println("\t"+f.getName() + ", params = " + f.getStringParameters().toString());
+
 					TemporalMetricState currentState = JavaFF.computeInitialState(groundProblem);
 					int unsat = 0;
 					TreeSet<State> open = new TreeSet<>(new HValueComparator());
@@ -498,13 +313,13 @@ public class JavaFF
 
 
 						// move forward with the search for 500ms
-						System.out.println("[BEFORE SEARCH state="+currentState.toString()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
+						System.out.println("[BEFORE SEARCH state="+currentState.hashCode()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
 
 						TemporalMetricState goalOrIntermediateState = unsat==0?
-								(TemporalMetricState) JavaFF.performEHCSearch(currentState, searchInterval, open, closed)
+								(TemporalMetricState) JavaFF.performEHCSearch(currentState, searchInterval, maxPPlanSize, open, closed)
 								:
-								(TemporalMetricState) JavaFF.performBFSSearch(currentState, searchInterval, open, closed);
-						System.out.println("[AFTER SEARCH state="+goalOrIntermediateState.toString()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
+								(TemporalMetricState) JavaFF.performBFSSearch(currentState, searchInterval, maxPPlanSize, open, closed);
+						System.out.println("[AFTER SEARCH state="+goalOrIntermediateState.hashCode()+"]: open.size=" + open.size() + "\t closed.size=" + closed.size());
 
 						//check whether unsat ~ empty open and search has return null
 						if(open.isEmpty() && goalOrIntermediateState == null)
@@ -546,8 +361,9 @@ public class JavaFF
 
 		// remove states in open list with different prefix and rebase plan of the ones with same prefix
 		List<Action> committedOrderedActions = ((TotalOrderPlan)currentState.getSolution()).getOrderedActions();
-		LinkedList<State> diffPrefixOpenStates = new LinkedList<>();
-		int openPrefixNotMatching = 0;
+		//LinkedList<State> diffPrefixOpenStates = new LinkedList<>();
+		LinkedList<State> samePrefixOpenStates = new LinkedList<>();
+		//int openPrefixNotMatching = 0;
 		for(State openState : open)
 		{
 			TemporalMetricState openStateTMS = (TemporalMetricState) openState;
@@ -562,15 +378,18 @@ public class JavaFF
 				}
 
 			if(!matching || j != committedOrderedActions.size()) {
-				openPrefixNotMatching++;
-				diffPrefixOpenStates.add(openState);//not matching, remove state from open
+				//openPrefixNotMatching++;
+				//diffPrefixOpenStates.add(openState);//not matching, remove state from open
 
-			}else if(matching){//not matching, remove state from open
+			}else if(matching){//matching, keep state in open
 				openStateTMS.rebasePlan(committedOrderedActions);
+				samePrefixOpenStates.add(openState);
 			}
 		}
-		open.removeAll(diffPrefixOpenStates);
-
+		//open.removeAll(diffPrefixOpenStates);
+		open.clear();
+		for(State s : samePrefixOpenStates)
+			open.add(s);
 
 		// closed clean up at each search interval
 		closed.clear();
@@ -683,6 +502,7 @@ public class JavaFF
 	public static State performEHCSearch(
 			TemporalMetricState initialState,
 			float searchIntervalMs,
+			int maxPPlanSize,
 			TreeSet<State> open,
 			Hashtable<Integer, State> closed) {
 
@@ -690,7 +510,7 @@ public class JavaFF
 		//infoOutput.println("\n\nPerforming FF search - EHC with only helpful actions");
 
 		// Now, initialise an EHC searcher
-		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, searchIntervalMs, open, closed);
+		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, searchIntervalMs, maxPPlanSize, open, closed);
 
 		EHCS.setFilter(HelpfulFilter.getInstance()); // and use the helpful actions neighbourhood
 
@@ -704,6 +524,7 @@ public class JavaFF
 	public static State performBFSSearch(
 			TemporalMetricState initialState,
 			float searchIntervalMs,
+			int maxPPlanSize,
 			TreeSet<State> open,
 			Hashtable<Integer, State> closed) {
 
@@ -711,7 +532,7 @@ public class JavaFF
 		//infoOutput.println("\n\nPerforming FF search - BFS with all applicable actions");
 
 		// create a Best-First Searcher
-		BestFirstSearch BFS = new BestFirstSearch(initialState, searchIntervalMs, open, closed);
+		BestFirstSearch BFS = new BestFirstSearch(initialState, searchIntervalMs, maxPPlanSize, open, closed);
 
 		// ... change to using the 'all actions' neighbourhood (a null filter, as it removes nothing)
 		BFS.setFilter(NullFilter.getInstance());

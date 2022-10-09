@@ -101,9 +101,13 @@ public class SearchThread extends Thread{
 
           // move forward with the search for interval search time
           TemporalMetricState goalOrIntermediateState = (ffstatus == FFSearchStatus.EHC_SEARCHING)?
-            (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.searchParams.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed)
+            (TemporalMetricState) JavaFF.performEHCSearch(this.sharedSearchData.searchCurrentState, 
+              this.sharedSearchData.searchParams.intervalSearchMS, this.sharedSearchData.searchParams.maxPPlanSize,
+              this.sharedSearchData.open, this.sharedSearchData.closed)
             :
-            (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.searchCurrentState, this.sharedSearchData.searchParams.intervalSearchMS, this.sharedSearchData.open, this.sharedSearchData.closed);
+            (TemporalMetricState) JavaFF.performBFSSearch(this.sharedSearchData.searchCurrentState, 
+              this.sharedSearchData.searchParams.intervalSearchMS, this.sharedSearchData.searchParams.maxPPlanSize,
+              this.sharedSearchData.open, this.sharedSearchData.closed);
 
           //check whether unsat ~ empty open and search has return null
           if(ffstatus == FFSearchStatus.EHC_SEARCHING)

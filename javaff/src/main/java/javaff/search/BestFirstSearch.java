@@ -28,6 +28,7 @@
 
 package javaff.search;
 
+import javaff.planning.STRIPSState;
 import javaff.planning.State;
 import javaff.planning.Filter;
 import javaff.planning.TemporalMetricState;
@@ -50,21 +51,23 @@ public class BestFirstSearch extends Search
 	protected TreeSet open;
 	protected Filter filter = null;
 	protected float searchIntervalMs = 1000.0F;
+	protected int maxPPlanSize = 32000;
 	
-	public BestFirstSearch(State s, float searchIntervalMs, TreeSet<State> open, Hashtable<Integer, State> closed)
+	public BestFirstSearch(State s, float searchIntervalMs, int maxPPlanSize, TreeSet<State> open, Hashtable<Integer, State> closed)
     {
-		this(s, searchIntervalMs, new HValueComparator());
+		this(s, searchIntervalMs, maxPPlanSize, new HValueComparator());
 
 		this.open = open;
 		this.closed = closed;
 	}
 
-	public BestFirstSearch(State s, float searchIntervalMs, Comparator c)
+	public BestFirstSearch(State s, float searchIntervalMs, int maxPPlanSize, Comparator c)
     {
 		super(s);
 		setComparator(c);
 
 		this.searchIntervalMs = searchIntervalMs;
+		this.maxPPlanSize = maxPPlanSize;
 	}
 
 	public void setFilter(Filter f)
@@ -113,6 +116,10 @@ public class BestFirstSearch extends Search
 
 		while (System.currentTimeMillis() - startSearchTime < this.searchIntervalMs && !open.isEmpty())
 		{
+			if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize)
+				break;
+			else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize)
+				break;
 			State s = removeNext();
 			if (needToVisit(s)) {
 				++nodeCount;

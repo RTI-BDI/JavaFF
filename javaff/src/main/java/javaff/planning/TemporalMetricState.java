@@ -34,7 +34,10 @@ import javaff.data.GroundCondition;
 import javaff.data.TotalOrderPlan;
 import javaff.data.Metric;
 import javaff.data.Action;
+import javaff.data.metric.NamedFunction;
 import javaff.data.strips.InstantAction;
+import javaff.data.strips.Proposition;
+import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.StartInstantAction;
 import javaff.data.temporal.SplitInstantAction;
 import javaff.scheduling.SchedulabilityChecker;
@@ -71,6 +74,20 @@ public class TemporalMetricState extends MetricState
 		invariants = new ArrayList();
 		checker = new VelosoSchedulabilityChecker();
 		
+	}
+	public String toString(){
+		String s = "";
+		for(Proposition p : (Set<Proposition>)this.facts)
+			s+=(p)+"\n";
+		for(NamedFunction nf : (Set<NamedFunction>)this.funcValues.keySet())
+			s+=(nf)+" " + this.funcValues.get(nf) +"\n";
+		return s;
+	}
+
+
+	public int getRealGValue()
+	{
+		return (plan.getPlanLength()/2);
 	}
 
 	public boolean goalReached()
@@ -129,6 +146,34 @@ public class TemporalMetricState extends MetricState
 		}
 		s.checker.addAction((InstantAction)a, s);
 		return s;
+	}
+
+	public Set<Proposition> getInitActionFacts(){
+		Set<Proposition> filteredFacts = new HashSet<>();
+		for(DurativeAction da : (HashSet<DurativeAction>)openActions)
+			for(Proposition f : facts)
+				if(!f.isDomainDefined() && ("i"+da.name.toString()).equals(f.getName()))
+					filteredFacts.add(f);
+		return filteredFacts;
+	}
+
+	public boolean equals(Object obj)
+	{
+		if (obj instanceof MetricState)
+		{
+			TemporalMetricState s = (TemporalMetricState) obj;
+			return (s.getDomainDefinedFacts().equals(getDomainDefinedFacts()) && s.getInitActionFacts().equals(getInitActionFacts()) && s.funcValues.equals(funcValues));
+		}
+		else return false;
+	}
+
+	public int hashCode()
+	{
+		int hash = 8;
+		hash = 31 * hash ^ getDomainDefinedFacts().hashCode();
+		hash = 31 * hash ^ getInitActionFacts().hashCode();
+		hash = 31 * hash ^ funcValues.hashCode();
+		return hash;
 	}
 
 	public void rebasePlan(List<Action> committedOrderedActions) {

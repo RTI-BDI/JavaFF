@@ -328,6 +328,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       this.sharedSearchData.searchCurrentState = initialState;
       this.sharedSearchData.goalReached = lookForImprovedSolutions? this.sharedSearchData.goalReached : false;
       this.sharedSearchData.searchParams.intervalSearchMS = searchParams.intervalSearchMS > 100? searchParams.intervalSearchMS : 100;
+      this.sharedSearchData.searchParams.maxPPlanSize = searchParams.maxPPlanSize > 0? searchParams.maxPPlanSize : 32000;
       this.sharedSearchData.searchParams.maxEmptySearchIntervals = searchParams.maxEmptySearchIntervals > 0? searchParams.maxEmptySearchIntervals : 1;
       
       lastExecStatusUpd = null;

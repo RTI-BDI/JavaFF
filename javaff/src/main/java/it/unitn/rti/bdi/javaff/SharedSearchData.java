@@ -33,5 +33,5 @@ public class SharedSearchData {
     public ReentrantLock searchLock = new ReentrantLock(true);
     public boolean goalReached = false;
 
-    public SearchParams searchParams = new SearchParams(500, 16);
+    public SearchParams searchParams = new SearchParams(500, 32000, 16);
 }

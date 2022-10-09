@@ -41,7 +41,7 @@ import java.util.Iterator;
 
 public class STRIPSState extends State implements Cloneable
 {
-	public Set facts;
+	public Set<Proposition> facts;
 	public Set actions;
 
 	protected TotalOrderPlan plan = new TotalOrderPlan();
@@ -171,13 +171,20 @@ public class STRIPSState extends State implements Cloneable
 	{
 		return plan;
 	}
+	public Set<Proposition> getDomainDefinedFacts(){
+		Set<Proposition> filteredFacts = new HashSet<>();
+		for(Proposition f : facts)
+			if(f.isDomainDefined())
+				filteredFacts.add(f);
+		return filteredFacts;
+	}
 
 	public boolean equals(Object obj)
 	{
 		if (obj instanceof STRIPSState)
 		{
 			STRIPSState s = (STRIPSState) obj;
-			return s.facts.equals(facts);
+			return s.getDomainDefinedFacts().equals(getDomainDefinedFacts());
 		}
 		else return false;
 	}
@@ -185,7 +192,7 @@ public class STRIPSState extends State implements Cloneable
 	public int hashCode()
 	{
 		int hash = 7;
-		hash = 31 * hash ^ facts.hashCode();
+		hash = 31 * hash ^ getDomainDefinedFacts().hashCode();
 		return hash;
 	}
 
