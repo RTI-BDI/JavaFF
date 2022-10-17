@@ -54,25 +54,12 @@ public class EnforcedHillClimbingSearch extends Search
 	protected float searchIntervalMs = 1000.0F;
 	protected int maxPPlanSize = 32000;
 
+	protected boolean online = true;
+	
+
 	public EnforcedHillClimbingSearch(State s)
 	{
 		this(s, new HValueComparator());
-	}
-
-	public EnforcedHillClimbingSearch(State s, float searchIntervalMs, int maxPPlanSize)
-	{
-		this(s, new HValueComparator());
-		this.searchIntervalMs = searchIntervalMs;
-		this.maxPPlanSize = maxPPlanSize;
-	}
-
-	public EnforcedHillClimbingSearch(State s, float searchIntervalMs,int maxPPlanSize, TreeSet<State> open, Hashtable<Integer, State> closed)
-	{
-		this(s, new HValueComparator());
-		this.searchIntervalMs = searchIntervalMs;
-		this.maxPPlanSize = maxPPlanSize;
-		this.open = open;
-		this.closed = closed;
 	}
 
 	public EnforcedHillClimbingSearch(State s, Comparator c)
@@ -80,9 +67,23 @@ public class EnforcedHillClimbingSearch extends Search
 		super(s);
 		this.bestIntermediateState = s;
 		setComparator(c);
+		this.open = new TreeSet<State>();
+		this.closed = new Hashtable<Integer, State>();
+	}
 
-		closed = new Hashtable<>();
-		open = new TreeSet<>();
+	public EnforcedHillClimbingSearch(State s, TreeSet<State> open, Hashtable<Integer, State> closed)
+	{
+		this(s,new HValueComparator());
+		this.open = open;
+		this.closed = closed;
+		this.online = false;
+	}
+	
+	public EnforcedHillClimbingSearch(State s, TreeSet<State> open, Hashtable<Integer, State> closed, float searchIntervalMs,int maxPPlanSize)
+	{
+		this(s, open, closed);
+		this.searchIntervalMs = searchIntervalMs;
+		this.maxPPlanSize = maxPPlanSize;
 	}
 
 	public void setFilter(Filter f)
@@ -94,47 +95,6 @@ public class EnforcedHillClimbingSearch extends Search
 	{
 		State S = (State) open.first();
 		boolean removed = open.remove(S);
-		if(!removed)
-		{
-			System.out.println("I WAS NOT ABLE TO REMOVE the STATE in the open list");// SHOULD NOT HAPPEN ANYMORE AFTER BUG FIX IN REBASE
-			/*
-			for(State tms : (TreeSet<State>)open)
-				if(((TemporalMetricState)tms).toString().equals(S.toString())) {
-					System.out.println("TROVATO NELLA OPEN");
-					System.out.println("riprovo remove " + open.remove(tms));
-					BigDecimal d1 = S.getHValue();
-					BigDecimal d2 = tms.getHValue();
-					System.out.println("S.h = " + d1 + " tms.h = " + d2);
-					int r = d1.compareTo(d2);
-					System.out.println("A r="+r);
-					if (r == 0)
-					{
-						d1 = S.getGValue();
-						d2 = tms.getGValue();
-						System.out.println("S.g = " + d1 + " tms.g = " + d2);
-						r = d1.compareTo(d2);
-						System.out.println("B r="+r);
-						if (r == 0)
-						{
-							System.out.println("r="+r);
-							if (tms.hashCode() > S.hashCode()) r = 1;
-							else if (tms.hashCode() == S.hashCode() && tms.equals(S)) r=0;
-							else r = -1;
-						}
-						System.out.println("C r="+r);
-					}
-					if(tms.equals(S))
-						System.out.println("TROVATO NELLA OPEN equals non ROTTA");
-
-				}
-
-			for(State tms : (TreeSet<State>)open)
-				if(((TemporalMetricState)tms).getUniqueId() == S.getUniqueId())
-					System.out.println("TROVATO NELLA OPEN con UNIQUE ID");
-
-			 */
-		}
-		//return open.pollFirst();
 		return S;
 	}
 
@@ -164,53 +124,34 @@ public class EnforcedHillClimbingSearch extends Search
 
 		int counter = 0;
 
-		while (System.currentTimeMillis() - startSearchTime < this.searchIntervalMs && !open.isEmpty()) // whilst still states to consider
+		while (!open.isEmpty())
 		{
-			if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize)
-				break;
-			else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize)
-				break;
+			if(online)
+			{
+				//TIME LIMIT
+				if(System.currentTimeMillis() - startSearchTime < this.searchIntervalMs)
+					break;
+
+				if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize)
+					break;
+				else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize)
+					break;
+			}
+			
 			//System.out.println("Still time to search");
 			State s = removeNext(); // get the next one
-			/*
-			for(Proposition p : ((HashSet<Proposition>)((STRIPSState)s).facts))
-				if(p.isDomainDefined() && p.getName().equals( "in"))
-					System.out.println("\n Remove from open: "+p);
-				else if (!p.isDomainDefined() && p.getName().equals("imove"))
-					System.out.println("\n Remove from open: " + p);
-			*/
 			Set<Action> actions = filter.getActions(s);
-			/*
-			for(Action a : actions)
-				System.out.println("\t- Selecting: " + a);
-			 */
 			Set<State> successors = s.getNextStates(actions); // and find its neighbourhood
 			for (State succ : successors) {
 
 				if (needToVisit(succ)) {
-					/*
-					for(Proposition p : ((HashSet<Proposition>)((STRIPSState)succ).facts))
-						if(p.isDomainDefined() && p.getName().equals( "in"))
-							System.out.println("\n Need to visit: "+p);
-						else if (!p.isDomainDefined() && p.getName().equals("imove"))
-							System.out.println("\n Need to visit: " + p);
-					System.out.println("Current closed: "+closed.size());
-					for(State ssClosed : ((Hashtable<Integer, State>)closed).values()) {
-						for (Proposition p : ((HashSet<Proposition>) ((STRIPSState) ssClosed).facts))
-							if (p.isDomainDefined() && p.getName().equals("in"))
-								System.out.print("\t " + p);
-							else if (!p.isDomainDefined() && p.getName().equals("imove"))
-								System.out.print("\t " + p);
-						System.out.println();
-					}
-					*/
 					counter++;
 					TemporalMetricState tms = (TemporalMetricState) succ;
 					if(tms.openActions.isEmpty() && tms.getHValue().compareTo(bestHValueNoOpenAction) < 0)//update bestHValueNoOpenAction
 					{
 						bestHValueNoOpenAction = tms.getHValue();
 						bestIntermediateState = tms;
-						System.out.println("Found better tms: plan.size = " + tms.getSolution().getActions().size() + ", h = " + bestHValueNoOpenAction);
+						//System.out.println("Found better tms: plan.size = " + tms.getSolution().getActions().size() + ", h = " + bestHValueNoOpenAction);
 					}
 
 					if (tms.goalReached()) { // if we've found a goal state - return it as the solution
@@ -219,7 +160,6 @@ public class EnforcedHillClimbingSearch extends Search
 					} else if (tms.getHValue().compareTo(bestHValue) < 0) {
 						// if we've found a state with a better heuristic value than the best seen so far
 						bestHValue = tms.getHValue(); // note the new best value
-						//javaff.JavaFF.infoOutput.println(bestHValue);
 						open.clear(); // clear the open list
 						open.add(tms); // put this on it
 						break; // and skip looking at the other successors

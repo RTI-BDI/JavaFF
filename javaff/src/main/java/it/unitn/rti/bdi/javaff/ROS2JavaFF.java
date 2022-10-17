@@ -149,7 +149,7 @@ public class ROS2JavaFF{
     exec.addNode(javaffSearchNode);
     
     exec.spin();
-
+    RCLJava.shutdown();
   }
 }
 
