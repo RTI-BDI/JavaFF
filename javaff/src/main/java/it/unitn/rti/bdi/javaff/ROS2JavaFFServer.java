@@ -6,6 +6,10 @@ import org.ros2.rcljava.service.Service;
 
 import it.unitn.rti.bdi.javaff.SearchParams;
 
+
+// JUST A FRONT END NODE FOR THE SERVICES FORWARDING 1->1 calls to ROS2JavaFFSearch
+// why did I create it? That's a great question... but if you came here and you understood what this node effectively do, 
+// you're probably on the right track xD
 public class ROS2JavaFFServer extends BaseComposableNode{
     
     // Sibling node carrying on planning search tasks

@@ -55,6 +55,7 @@ public class SearchThread extends Thread{
 
   public void killMySelf(){killMySelf = true;}
   
+  /* SEARCH THREAD CORE LIFECYCLE */
   public void run(){
     this.sharedSearchData.open.clear();
 
