@@ -614,7 +614,7 @@ public class SearchDataUtils {
     return simActions(updCurrentState, currPlanIndex, tspQueue, true);
   }
 
-
+  /* Compare two search baseline and return true if they have the committed actions match */
   public static boolean sameSearchBaseline(javaff_interfaces.msg.CommittedStatus oldSB, javaff_interfaces.msg.CommittedStatus newSB){
     if(oldSB.getExecutingPlanIndex() != newSB.getExecutingPlanIndex())
       return false;

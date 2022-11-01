@@ -21,7 +21,7 @@ public class SharedSearchData {
     public TemporalMetricState searchCurrentState; // search current state
     
     public TemporalMetricState nextCommittedState; // THEORETICAL (wrt initial status when search for the plan in execution started) next state with no open action in execution
-    public TemporalMetricState actualNextCommittedState; // ACTUAL next state with no open action in executio
+    public TemporalMetricState actualNextCommittedState; // ACTUAL next state with no open action in execution
   
     public ros2_bdi_interfaces.msg.Desire fulfillingDesire;
     public ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue;

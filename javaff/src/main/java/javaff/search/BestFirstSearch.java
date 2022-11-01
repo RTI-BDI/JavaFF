@@ -52,22 +52,35 @@ public class BestFirstSearch extends Search
 	protected Filter filter = null;
 	protected float searchIntervalMs = 1000.0F;
 	protected int maxPPlanSize = 32000;
+	protected boolean online = true;
 	
-	public BestFirstSearch(State s, float searchIntervalMs, int maxPPlanSize, TreeSet<State> open, Hashtable<Integer, State> closed)
+	public BestFirstSearch(State s, Comparator c)
+	{
+		super(s);
+		this.bestIntermediateState = s;
+		setComparator(c);
+
+		closed = new Hashtable<>();
+		open = new TreeSet<>();
+	}
+
+	public BestFirstSearch(State s,  TreeSet<State> open, Hashtable<Integer, State> closed, float searchIntervalMs, int maxPPlanSize)
     {
-		this(s, searchIntervalMs, maxPPlanSize, new HValueComparator());
+		this(s, new HValueComparator());
 
 		this.open = open;
 		this.closed = closed;
-	}
-
-	public BestFirstSearch(State s, float searchIntervalMs, int maxPPlanSize, Comparator c)
-    {
-		super(s);
-		setComparator(c);
-
 		this.searchIntervalMs = searchIntervalMs;
 		this.maxPPlanSize = maxPPlanSize;
+	}
+
+	public BestFirstSearch(State s,  TreeSet<State> open, Hashtable<Integer, State> closed, boolean online)
+    {
+		this(s, new HValueComparator());
+		
+		this.open = open;
+		this.closed = closed;
+		this.online = online;
 	}
 
 	public void setFilter(Filter f)
@@ -84,15 +97,6 @@ public class BestFirstSearch extends Search
     {
 		State S = (State) ((TreeSet) open).first();
 		open.remove(S);
-                /*
-                System.out.println("================================");
-		S.getSolution().print(System.out);
-		System.out.println("----Helpful Actions-------------");
-		javaff.planning.TemporalMetricState ms = (javaff.planning.TemporalMetricState) S;
-		System.out.println(ms.helpfulActions);
-		System.out.println("----Relaxed Plan----------------");
-		ms.RelaxedPlan.print(System.out);
-                */
 		return S;
 	}
 
@@ -114,12 +118,21 @@ public class BestFirstSearch extends Search
 
 		open.add(start);
 
-		while (System.currentTimeMillis() - startSearchTime < this.searchIntervalMs && !open.isEmpty())
-		{
-			if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize)
-				break;
-			else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize)
-				break;
+		while (!open.isEmpty()) 
+		{ 
+			if(online) 
+			{ 
+				// TIME LIMIT 
+				if(System.currentTimeMillis() - startSearchTime > this.searchIntervalMs) 
+					return bestIntermediateState; 
+				
+				// PLAN SIZE LIMIT
+				if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize) 
+					return bestIntermediateState; 
+				else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize) 
+					return bestIntermediateState; 
+			} 
+
 			State s = removeNext();
 			if (needToVisit(s)) {
 				++nodeCount;
