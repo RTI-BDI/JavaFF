@@ -52,30 +52,36 @@ public class BestFirstSearch extends Search
 	protected Filter filter = null;
 	protected float searchIntervalMs = 1000.0F;
 	protected int maxPPlanSize = 32000;
-
 	protected boolean online = true;
 	
-	public BestFirstSearch(State s, TreeSet<State> open, Hashtable<Integer, State> closed, Comparator c)
+	public BestFirstSearch(State s, Comparator c)
 	{
 		super(s);
+		this.bestIntermediateState = s;
 		setComparator(c);
-	}
-	
-	public BestFirstSearch(State s, TreeSet<State> open, Hashtable<Integer, State> closed)
-    {
-		this(s, open, closed, new HValueComparator());
-		this.open = open;
-		this.closed = closed;
-		this.online = false;
+
+		closed = new Hashtable<>();
+		open = new TreeSet<>();
 	}
 
-	public BestFirstSearch(State s, TreeSet<State> open, Hashtable<Integer, State> closed, float searchIntervalMs, int maxPPlanSize)
+	public BestFirstSearch(State s,  TreeSet<State> open, Hashtable<Integer, State> closed, float searchIntervalMs, int maxPPlanSize)
     {
-		this(s, open, closed, new HValueComparator());
-		this.maxPPlanSize = maxPPlanSize;
+		this(s, new HValueComparator());
+
+		this.open = open;
+		this.closed = closed;
 		this.searchIntervalMs = searchIntervalMs;
 	}
 	
+
+	public BestFirstSearch(State s,  TreeSet<State> open, Hashtable<Integer, State> closed, boolean online)
+    {
+		this(s, new HValueComparator());
+		
+		this.open = open;
+		this.closed = closed;
+		this.online = online;
+	}
 
 	public void setFilter(Filter f)
 	{
@@ -112,20 +118,21 @@ public class BestFirstSearch extends Search
 
 		open.add(start);
 
-		while (!open.isEmpty())
-		{
-			if(online)
-			{
-				//TIME LIMIT
-				if(System.currentTimeMillis() - startSearchTime < this.searchIntervalMs)
-					break;
+		while (!open.isEmpty()) 
+		{ 
+			if(online) 
+			{ 
+				// TIME LIMIT 
+				if(System.currentTimeMillis() - startSearchTime > this.searchIntervalMs) 
+					return bestIntermediateState; 
+				
+				// PLAN SIZE LIMIT
+				if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize) 
+					return bestIntermediateState; 
+				else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize) 
+					return bestIntermediateState; 
+			} 
 
-				if(bestIntermediateState instanceof TemporalMetricState && ((TemporalMetricState) bestIntermediateState).getRealGValue() >= maxPPlanSize)
-					break;
-				else if(bestIntermediateState instanceof STRIPSState && ((STRIPSState) bestIntermediateState).getGValue().intValue() >= maxPPlanSize)
-					break;
-			}
-			
 			State s = removeNext();
 			if (needToVisit(s)) {
 				++nodeCount;

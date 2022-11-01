@@ -507,15 +507,14 @@ public class JavaFF
 			Hashtable<Integer, State> closed) {
 
 		// Implementation of standard FF-style search
-		//infoOutput.println("\n\nPerforming FF search - EHC with only helpful actions");
 
 		// Now, initialise an EHC searcher
-		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, open, closed, searchIntervalMs, maxPPlanSize);
-
-		EHCS.setFilter(HelpfulFilter.getInstance()); // and use the helpful actions neighbourhood
-
-		// Try and find a plan using EHC
-		State goalOrIntermediateState = EHCS.search();
+		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, open, closed, searchIntervalMs, maxPPlanSize); 
+ 
+		EHCS.setFilter(HelpfulFilter.getInstance()); // and use the helpful actions neighbourhood 
+ 
+		// Try and find a plan using EHC 
+		State goalOrIntermediateState = EHCS.search(); 
 
 		return goalOrIntermediateState; // return the plan
 
@@ -560,10 +559,9 @@ public class JavaFF
 			Hashtable<Integer, State> closed) {
 
 		// Implementation of standard FF-style search
-		//infoOutput.println("\n\nPerforming FF search - BFS with all applicable actions");
 
 		// create a Best-First Searcher
-		BestFirstSearch BFS = new BestFirstSearch(initialState, open, closed, searchIntervalMs, maxPPlanSize);
+		BestFirstSearch BFS = new BestFirstSearch(initialState, open, closed, searchIntervalMs, maxPPlanSize); 
 
 		// ... change to using the 'all actions' neighbourhood (a null filter, as it removes nothing)
 		BFS.setFilter(NullFilter.getInstance());
@@ -573,5 +571,34 @@ public class JavaFF
 
 		return goalOrIntermediateState; // return the plan
 
+	}
+
+	public static State performOfflineSearch( 
+			TemporalMetricState initialState, 
+			TreeSet<State> open, 
+			Hashtable<Integer, State> closed) { 
+ 
+		// Implementation of standard FF-style search 
+ 
+		// Now, initialise an EHC searcher 
+		EnforcedHillClimbingSearch EHCS = new EnforcedHillClimbingSearch(initialState, open, closed, false); 
+ 
+		EHCS.setFilter(HelpfulFilter.getInstance()); // and use the helpful actions neighbourhood 
+ 
+		// Try and find a plan using EHC 
+		State goalOrIntermediateState = EHCS.search(); 
+		if(goalOrIntermediateState == null) 
+		{ 
+			// create a Best-First Searcher 
+			BestFirstSearch BFS = new BestFirstSearch(initialState, open, closed, false); 
+ 
+			// ... change to using the 'all actions' neighbourhood (a null filter, as it removes nothing) 
+			BFS.setFilter(NullFilter.getInstance()); 
+ 
+			// and use that 
+			goalOrIntermediateState = BFS.search(); 
+		} 
+ 
+		return goalOrIntermediateState; // return the plan 
 	}
 }

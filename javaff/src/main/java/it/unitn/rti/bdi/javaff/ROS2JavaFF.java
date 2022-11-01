@@ -114,7 +114,7 @@ public class ROS2JavaFF{
     return domain;
   }
 
-  // BOOT BOTH Server and Search node, with the former being just a (useless) call forwarding mechanism
+  // boot both Server and Search node, with the former being just a (useless) call forwarding mechanism
   public static void main(final String[] args) throws Exception {   
     // for(String a : args)
     //   System.out.println(a);
