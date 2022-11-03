@@ -53,6 +53,8 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     private int minCommitSteps;
 
+    private int simToN;
+
     private javaff_interfaces.msg.ExecutionStatus lastExecStatusUpd;
 
     public void setServerNode(ROS2JavaFFServer serverNode){this.serverNode = serverNode;}
@@ -193,6 +195,11 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
 
     
     /* Forecast plan failure:
+    * PARAM
+    *   notificationReason  -> ACTION_STARTED, ACTION_FINISHED, GOAL_BOOST
+    *   simToGoalReq        -> NO_SIM_TO_GOAL, SIM_TO_GOAL, SIM_TO_GOAL_FORCE_REPLAN
+    *   simToN              -> -1 if sim to Goal, otherwise sim just successful N steps
+    * RETURN
     * FAIL_C : case failure in committed actions -> too late to act
     * FAIL_NC: plan not valid, but we can replan
     * NO_FAIL: plan still valid and sound, i.e. able to sim. to goal
@@ -204,7 +211,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         We basically do not sim. in that situation, we know that correct replacement of the plan has been performed in time, so we wait the end of the committed actions in the current plan and
         then, as soon as the new one starts, forecast proceeds as usual 
     */
-    private ForecastPlanFailureRes forecastPlanFailure(final short notificationReason, final short simToGoal){
+    private ForecastPlanFailureRes forecastPlanFailure(final short notificationReason, final short simToGoalReq){
       final javaff_interfaces.msg.ExecutionStatus protoExecStatus = new javaff_interfaces.msg.ExecutionStatus();
       if(this.sharedSearchData.actualNextCommittedState == null)
       {
@@ -214,14 +221,21 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
       else if(notificationReason == protoExecStatus.NEW_ACTION_STARTED || notificationReason == protoExecStatus.GOAL_BOOST) // it's not valuable to start a search thread looking for alternative/improved solutions, if I just received a diff. type of notification (such as action finished, because results can become obsolete very quickly)
       {
         // force sim to goal should force its way into brutal replanning
-        if (this.sharedSearchData.goalReached && simToGoal == protoExecStatus.SIM_TO_GOAL || simToGoal == protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN)// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
+        if (this.sharedSearchData.goalReached && simToGoalReq == protoExecStatus.SIM_TO_GOAL || simToGoalReq == protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN)// if goal reached, try simulate current exec status to goal to see if it's still achievable through computed plan
         {
-          boolean goalStillReachable = simToGoal != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToGoal(this.sharedSearchData.actualNextCommittedState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue);
-          System.out.println("Sim: " + goalStillReachable);    
-          if(!goalStillReachable)
-            return ForecastPlanFailureRes.FAIL_NC;
+          if(simToN < 0)
+          {
+            boolean goalStillReachable = simToGoalReq != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToGoal(this.sharedSearchData.actualNextCommittedState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue);
+            System.out.println("Sim to goal result: " + goalStillReachable);    
+            return (goalStillReachable)? ForecastPlanFailureRes.NO_FAIL : ForecastPlanFailureRes.FAIL_NC;
+
+          }
           else
-            return ForecastPlanFailureRes.NO_FAIL; 
+          {
+            boolean canPerformNSteps = simToGoalReq != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToN(this.sharedSearchData.actualNextCommittedState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue, this.simToN);
+            System.out.println("Sim to N=" + simToN + " result: " + canPerformNSteps);    
+            return (canPerformNSteps)?  ForecastPlanFailureRes.NO_FAIL:  ForecastPlanFailureRes.FAIL_NC;
+          }
         }
           
       }
@@ -257,11 +271,12 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
      * @domain PDDL 2.1 domain string to keep loaded for all future requests
      * @minCommitSteps minimum number of sequential actions that will be considered committed when action a which has just started running (therefore committed) starts
     */
-    public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug, int minCommitSteps) {
+    public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug, int minCommitSteps, int simToN) {
       super(name, namespace);
       this.domain = domain;
       this.debug = debug;
       this.minCommitSteps = minCommitSteps;
+      this.simToN = simToN;
 
       this.sharedSearchData = new SharedSearchData();
       

@@ -597,6 +597,127 @@ public class SearchDataUtils {
   }
 
   /*
+   * Simulate up to N actions in tspQueue starting from currPlanIndex and taking into consideration the current status of each single tsa in the different tsp
+  */
+  private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, 
+    ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, int nsteps)
+  {
+    javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
+    TemporalMetricState currentState = (TemporalMetricState) updCurrentState.clone();
+    TimeStampedPlan tsp = tspQueue.get(currPlanIndex);
+    TreeSet<SplitInstantAction> orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+    Iterator<SplitInstantAction> itsa = orderedSplitInstantActions.iterator();
+    
+    String msgLog = "";
+
+    // all sia in tsp which are going to mark as committed in this round
+    ArrayList<SplitInstantAction> orderedSimSplitInstantActions = new ArrayList<>();
+
+    while(itsa.hasNext())
+    {
+      if(computeMaxCommittedSequence(orderedSimSplitInstantActions)>=nsteps)
+        return currentState;
+        
+      SplitInstantAction sia = itsa.next();
+      String actionFullNameNoTime = "(" + sia.parent.toString() + ")";
+      float actionPlannedTimeStart = (sia instanceof StartInstantAction)? sia.predictedInstant.floatValue()*1000.0f : sia.getSibling().predictedInstant.floatValue()*1000.0f;
+      String actionFullName = actionFullNameNoTime + ":" + actionPlannedTimeStart;
+      TimeStampedAction tsa = tsp.getTimeStampedAction(actionFullName);
+      if(tsa == null)
+      { 
+        System.out.println(msgLog);
+        System.out.println("SimActions sim to N=" + nsteps + ": tsa '" + actionFullName + "' not found!");
+        return null;
+      }
+
+      
+      boolean actionBTStillRunning = tsa.status == aes.RUNNING || tsa.status == aes.RUN_SUC;
+      boolean actionBTWaiting = tsa.status == aes.WAITING || tsa.status == aes.RUN_SUC;
+
+      if(actionBTStillRunning && sia instanceof StartInstantAction)
+      {
+        // apply all no-domain defined effect of sia Start snap action of a currently running action
+        Set operators = sia.effect.getOperators();
+        Set addPropositions = sia.effect.getAddPropositions();
+        Set delPropositions = sia.effect.getDeletePropositions();
+        for(Object op : operators)
+          if(op instanceof ResourceOperator)
+            if(! (((ResourceOperator) op).resource.getPredicateSymbol().isDomainDefined()))
+              ((ResourceOperator) op).apply(currentState);
+            
+
+        for(Object addProp : addPropositions)
+          if(addProp instanceof Proposition)
+            if(! (((Proposition) addProp).getPredicateSymbol().isDomainDefined()))
+              ((Proposition) addProp).apply(currentState);
+            
+        
+        for(Object delProp : delPropositions)
+          if(delProp instanceof Proposition)
+            if(! (((Proposition) delProp).getPredicateSymbol().isDomainDefined()))
+              ((Proposition) delProp).apply(currentState);
+            
+        msgLog += ("\nApplied non domain defined effects of " + sia);
+
+      }else if( actionBTWaiting || actionBTStillRunning && sia instanceof EndInstantAction){
+        // apply instant actions iff 
+        // not started yet (hence, not even effect at start applied) 
+        //  OR 
+        // iff currently running and here we've reached the end snap action in the simulation
+
+        if(sia.isApplicable(currentState))
+        {
+          orderedSimSplitInstantActions.add(sia);
+          currentState = (TemporalMetricState) currentState.apply(sia);
+        }
+        else
+        {
+          System.out.println(msgLog);
+          System.out.println("SimActions to N=" + nsteps + ": sia not applicable: " + sia);
+          return null;
+        }
+
+        msgLog += ("\nApplied effects of " + sia);
+      }
+    }
+
+    // sim to goal, taking into consideration all following enqueued plans
+    
+    // apply all enqueued tsp here (some might still be missing though: deal with it externally) 
+    currPlanIndex++;
+    while(currPlanIndex < tspQueue.size() && sameSearchBaseline(tspQueue.get(currPlanIndex-1).searchBaseline, tspQueue.get(currPlanIndex).searchBaseline))
+    {
+      if(computeMaxCommittedSequence(orderedSimSplitInstantActions)>=nsteps)
+        return currentState;
+
+      tsp = tspQueue.get(currPlanIndex);
+      orderedSplitInstantActions = (TreeSet<SplitInstantAction>)tsp.getSortedSplitInstantActions();
+      itsa = orderedSplitInstantActions.iterator();
+      while(itsa.hasNext())
+      { 
+        SplitInstantAction sia = itsa.next();
+        if(sia.isApplicable(currentState))
+        {
+          orderedSimSplitInstantActions.add(sia);
+          currentState = (TemporalMetricState) currentState.apply(sia);
+        }
+        else
+        {
+          System.out.println(msgLog);
+          System.out.println("SimActions to N=" + nsteps + ": sia not applicable: " + sia);
+          return null;
+        }
+        
+        msgLog += ("\nApplied effects of " + sia);
+      }
+
+      currPlanIndex++;
+    }
+
+    return currentState;
+  }
+
+  /*
    * Simulate current state to goal path applying the effects based on the state of the action in the corresponding tsp (i.e. WAITING, RUNNING, EXECUTED) 
    * and return whether the goal is still achievable in the response
   */
@@ -604,6 +725,16 @@ public class SearchDataUtils {
     TemporalMetricState currentState = simActions(updCurrentState, currPlanIndex, tspQueue, false);
     
     return (currentState==null)? false : currentState.goalReached();
+  }
+
+  /*
+   * Simulate current state to goal path applying the effects based on the state of the action in the corresponding tsp (i.e. WAITING, RUNNING, EXECUTED) 
+   * and return whether the goal is still achievable in the response
+  */
+  public static boolean successSimToN(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, int simToN){
+    TemporalMetricState currentState = simActions(updCurrentState, currPlanIndex, tspQueue, simToN);
+    
+    return currentState!=null;
   }
 
   /*

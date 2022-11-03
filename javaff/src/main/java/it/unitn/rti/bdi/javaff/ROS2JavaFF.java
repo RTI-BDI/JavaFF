@@ -6,7 +6,7 @@ package it.unitn.rti.bdi.javaff;
 import java.io.File;  // Import the File class
 import java.io.FileNotFoundException;  // Import this class to handle errors
 import java.util.Scanner; // Import the Scanner class to read text files
-
+import java.lang.NumberFormatException;
 
 import org.ros2.rcljava.RCLJava;
 import org.ros2.rcljava.executors.MultiThreadedExecutor;
@@ -56,6 +56,22 @@ public class ROS2JavaFF{
     String minCommitSteps = retrieveArgument(args, "@", 3);
     String steps = minCommitSteps.substring(("min_commit_steps").length()+1);
     return Integer.parseInt(steps);
+  }
+
+  private static int retrieveSimToN(final String[] args){
+    String simToNSteps = retrieveArgument(args, "$", 3);
+    //System.out.println("AAAAAA: " + simToNSteps);
+    String sNsteps = simToNSteps.substring(("sim_to_n").length()+1);
+    int nsteps = 0;
+    try
+    {  
+      nsteps = Integer.parseInt(sNsteps);
+    }
+    catch(java.lang.NumberFormatException nfe)
+    {
+      nsteps = -1;
+    }
+    return nsteps;
   }
 
   private static String readFile(String filepath) throws FileNotFoundException {
@@ -133,6 +149,9 @@ public class ROS2JavaFF{
     int minCommitSteps = retrieveMinCommitSteps(args);
     System.out.println("Min commit steps = " + minCommitSteps);
 
+    int simToN = retrieveSimToN(args);
+    System.out.println("Sim to N = " + simToN);
+
     //System.out.println("Loaded domain file: \"" + domain + "\"");
 
     // Initialize RCL
@@ -141,7 +160,7 @@ public class ROS2JavaFF{
     MultiThreadedExecutor exec = new MultiThreadedExecutor(2);
     
     ROS2JavaFFServer javaffServerNode = new ROS2JavaFFServer("javaff_server", ns);
-    ROS2JavaFFSearch javaffSearchNode = new ROS2JavaFFSearch("javaff_search", ns, domain, debugActive, minCommitSteps);
+    ROS2JavaFFSearch javaffSearchNode = new ROS2JavaFFSearch("javaff_search", ns, domain, debugActive, minCommitSteps, simToN);
 
     javaffSearchNode.setServerNode(javaffServerNode);
     javaffServerNode.setSearchNode(javaffSearchNode);
