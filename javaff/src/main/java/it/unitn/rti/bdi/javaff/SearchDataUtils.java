@@ -496,6 +496,7 @@ public class SearchDataUtils {
   private static TemporalMetricState simActions(TemporalMetricState updCurrentState, short currPlanIndex, 
     ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, boolean justSimCommitted)
   {
+    //System.out.println("\n\nsimActions call");
     javaff_interfaces.msg.ActionExecutionStatus aes = new javaff_interfaces.msg.ActionExecutionStatus();
     TemporalMetricState currentState = (TemporalMetricState) updCurrentState.clone();
     TimeStampedPlan tsp = tspQueue.get(currPlanIndex);
@@ -553,6 +554,15 @@ public class SearchDataUtils {
         //  OR 
         // iff currently running and here we've reached the end snap action in the simulation
 
+        // System.out.println("\nSim Actions: about to apply " + sia + " planned to occur at " + sia.predictedInstant);
+
+        // for(Proposition f : currentState.facts)
+        //   System.out.println("True in cs : " + f);
+
+
+        // for(Proposition c : ((HashSet<Proposition>) sia.condition.getConditionalPropositions()))
+        //   System.out.println("Has to be true in " + sia + " : " + c);
+
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
         else{
@@ -580,6 +590,14 @@ public class SearchDataUtils {
       while(itsa.hasNext())
       { 
         SplitInstantAction sia = itsa.next();
+        // System.out.println("\nAbout to apply " + sia + " planned to occur at " + sia.predictedInstant);
+
+        // for(Proposition f : currentState.facts)
+        //   System.out.println("True in cs : " + f);
+
+        // for(Proposition c : ((HashSet<Proposition>) sia.condition.getConditionalPropositions()))
+        //   System.out.println("Has to be true in " + sia + " : " + c);
+
         if(sia.isApplicable(currentState))
           currentState = (TemporalMetricState) currentState.apply(sia);
         else{
@@ -666,6 +684,13 @@ public class SearchDataUtils {
         // not started yet (hence, not even effect at start applied) 
         //  OR 
         // iff currently running and here we've reached the end snap action in the simulation
+        // System.out.println("\nAbout to apply " + sia + " planned to occur at " + sia.predictedInstant);
+
+        // for(Proposition f : currentState.facts)
+        //   System.out.println("True in cs : " + f);
+
+        // for(Proposition c : ((HashSet<Proposition>) sia.condition.getConditionalPropositions()))
+        //   System.out.println("Has to be true in " + sia + " : " + c);
 
         if(sia.isApplicable(currentState))
         {
@@ -724,6 +749,7 @@ public class SearchDataUtils {
    * and return whether the goal is still achievable in the response
   */
   public static boolean successSimToGoal(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue){
+    // System.out.println("\n\nsuccessSimToGoal");
     TemporalMetricState currentState = simActions(updCurrentState, currPlanIndex, tspQueue, false);
     
     return (currentState==null)? false : currentState.goalReached();
@@ -734,6 +760,7 @@ public class SearchDataUtils {
    * and return whether the goal is still achievable in the response
   */
   public static boolean successSimToN(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue, int simToN){
+    // System.out.println("\n\nsuccessSimToN");
     TemporalMetricState currentState = simActions(updCurrentState, currPlanIndex, tspQueue, simToN);
     
     return currentState!=null;
@@ -744,6 +771,7 @@ public class SearchDataUtils {
    * and return the achieved state (null in case it was not possible to achieve it)
   */
   public static TemporalMetricState simCommitted(TemporalMetricState updCurrentState, short currPlanIndex, ArrayList<TimeStampedPlanWithSearchBaseline> tspQueue){
+    // System.out.println("\n\nsimCommitted");
     return simActions(updCurrentState, currPlanIndex, tspQueue, true);
   }
 

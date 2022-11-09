@@ -142,7 +142,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         System.out.println("New BOOSTED goal: " + msg.getPddlProblem().substring(msg.getPddlProblem().indexOf("goal")));
 
       // FORECAST PLAN FAILURE
-      ForecastPlanFailureRes planFailure = forecastPlanFailure(msg.getNotificationReason(), msg.getSimToGoal());
+      ForecastPlanFailureRes planFailure = forecastPlanFailure(JavaFF.computeInitialState(updGroundProblem), msg.getNotificationReason(), msg.getSimToGoal());
       System.out.println("forecasting plan failure -> " + planFailure);
       
       // REACT TO PLAN FAILURE RESULT (continue, replan or improve)
@@ -211,7 +211,7 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         We basically do not sim. in that situation, we know that correct replacement of the plan has been performed in time, so we wait the end of the committed actions in the current plan and
         then, as soon as the new one starts, forecast proceeds as usual 
     */
-    private ForecastPlanFailureRes forecastPlanFailure(final short notificationReason, final short simToGoalReq){
+    private ForecastPlanFailureRes forecastPlanFailure(TemporalMetricState currState, final short notificationReason, final short simToGoalReq){
       final javaff_interfaces.msg.ExecutionStatus protoExecStatus = new javaff_interfaces.msg.ExecutionStatus();
       if(this.sharedSearchData.actualNextCommittedState == null)
       {
@@ -225,14 +225,14 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
         {
           if(simToN < 0)
           {
-            boolean goalStillReachable = simToGoalReq != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToGoal(this.sharedSearchData.actualNextCommittedState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue);
+            boolean goalStillReachable = simToGoalReq != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToGoal(currState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue);
             System.out.println("Sim to goal result: " + goalStillReachable);    
             return (goalStillReachable)? ForecastPlanFailureRes.NO_FAIL : ForecastPlanFailureRes.FAIL_NC;
 
           }
           else
           {
-            boolean canPerformNSteps = simToGoalReq != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToN(this.sharedSearchData.actualNextCommittedState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue, this.simToN);
+            boolean canPerformNSteps = simToGoalReq != protoExecStatus.SIM_TO_GOAL_FORCE_REPLAN && SearchDataUtils.successSimToN(currState, this.sharedSearchData.executingTspWSB.planIndex, this.sharedSearchData.tspQueue, this.simToN);
             System.out.println("Sim to N=" + simToN + " result: " + canPerformNSteps);    
             return (canPerformNSteps)?  ForecastPlanFailureRes.NO_FAIL:  ForecastPlanFailureRes.FAIL_NC;
           }
