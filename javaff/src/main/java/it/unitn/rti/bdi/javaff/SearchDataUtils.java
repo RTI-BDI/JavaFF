@@ -306,15 +306,16 @@ public class SearchDataUtils {
   }
 
   /*
-    Compute max committed number of completed and sequential durative actions (SplitInstantAction start + end) in orderedCommittedSplitInstantActions starting from currIndex
+    Compute max number of completed and sequential durative actions in passed array (SplitInstantAction start + end) 
+    in orderedSplitInstantActions starting from currIndex
   */ 
-  private static int computeMaxCommittedSequenceI(ArrayList<SplitInstantAction> orderedCommittedSplitInstantActions, int currIndex){
-    if(currIndex >= orderedCommittedSplitInstantActions.size())//already overflowed arrat
+  private static int computeMaxSequenceI(ArrayList<SplitInstantAction> orderedSplitInstantActions, int currIndex){
+    if(currIndex >= orderedSplitInstantActions.size())//already overflowed arrat
       return 0;
 
-    SplitInstantAction sia = orderedCommittedSplitInstantActions.get(currIndex);
+    SplitInstantAction sia = orderedSplitInstantActions.get(currIndex);
 
-    if(currIndex == orderedCommittedSplitInstantActions.size() - 1)
+    if(currIndex == orderedSplitInstantActions.size() - 1)
       if(sia instanceof StartInstantAction)
         return 0; // reached the end of the chain with a StartInstantAction
       else
@@ -322,28 +323,28 @@ public class SearchDataUtils {
         
     else
       if(sia instanceof StartInstantAction)
-        return 0 + computeMaxCommittedSequenceI(orderedCommittedSplitInstantActions, currIndex + 1);
+        return 0 + computeMaxSequenceI(orderedSplitInstantActions, currIndex + 1);
       else
       {
         int maxStepsAfter = 0;
-        for(int i=currIndex+1; i<orderedCommittedSplitInstantActions.size(); i++)
+        for(int i=currIndex+1; i<orderedSplitInstantActions.size(); i++)
         {
-          SplitInstantAction followingSia = orderedCommittedSplitInstantActions.get(i);
+          SplitInstantAction followingSia = orderedSplitInstantActions.get(i);
           if(followingSia instanceof StartInstantAction && followingSia.predictedInstant.compareTo(sia.predictedInstant) > 0)
-            maxStepsAfter = Math.max(maxStepsAfter, computeMaxCommittedSequenceI(orderedCommittedSplitInstantActions, i));
+            maxStepsAfter = Math.max(maxStepsAfter, computeMaxSequenceI(orderedSplitInstantActions, i));
         }
         return 1 + maxStepsAfter; // count this step and add it to the max number of steps after it
       }
   }
 
   /*
-    Compute max committed number of completed and sequential durative actions (SplitInstantAction start + end) in orderedCommittedSplitInstantActions
+    Compute max number of completed and sequential durative actions in passed array (SplitInstantAction start + end) in orderedSplitInstantActions
   */ 
-  private static int computeMaxCommittedSequence(ArrayList<SplitInstantAction> orderedCommittedSplitInstantActions){
-    if(orderedCommittedSplitInstantActions.size() == 0)
+  private static int computeMaxSequence(ArrayList<SplitInstantAction> orderedSplitInstantActions){
+    if(orderedSplitInstantActions.size() == 0)
       return 0;
     else
-      return computeMaxCommittedSequenceI(orderedCommittedSplitInstantActions, 0);
+      return computeMaxSequenceI(orderedSplitInstantActions, 0);
   }
 
   /*
@@ -425,7 +426,7 @@ public class SearchDataUtils {
               //mark the timestamped action in the tsp as committed for execution
               tsp.markCommitted(sia.parent, sia.parent.startAction.predictedInstant);
               
-              sequentialCommitCounter = computeMaxCommittedSequence(orderedCommittedSplitInstantActions);
+              sequentialCommitCounter = computeMaxSequence(orderedCommittedSplitInstantActions);
               //System.out.println("computeNextCommittedState: max committed sequence up to now: " + sequentialCommitCounter + "; striving for " + minCommitSteps);
             }
           }
@@ -615,7 +616,7 @@ public class SearchDataUtils {
 
     while(itsa.hasNext())
     {
-      if(computeMaxCommittedSequence(orderedSimSplitInstantActions)>=nsteps)
+      if(computeMaxSequence(orderedSimSplitInstantActions)>=nsteps)
         return currentState;
         
       SplitInstantAction sia = itsa.next();
@@ -656,7 +657,8 @@ public class SearchDataUtils {
           if(delProp instanceof Proposition)
             if(! (((Proposition) delProp).getPredicateSymbol().isDomainDefined()))
               ((Proposition) delProp).apply(currentState);
-            
+        
+        orderedSimSplitInstantActions.add(sia);
         msgLog += ("\nApplied non domain defined effects of " + sia);
 
       }else if( actionBTWaiting || actionBTStillRunning && sia instanceof EndInstantAction){
@@ -687,7 +689,7 @@ public class SearchDataUtils {
     currPlanIndex++;
     while(currPlanIndex < tspQueue.size() && sameSearchBaseline(tspQueue.get(currPlanIndex-1).searchBaseline, tspQueue.get(currPlanIndex).searchBaseline))
     {
-      if(computeMaxCommittedSequence(orderedSimSplitInstantActions)>=nsteps)
+      if(computeMaxSequence(orderedSimSplitInstantActions)>=nsteps)
         return currentState;
 
       tsp = tspQueue.get(currPlanIndex);
