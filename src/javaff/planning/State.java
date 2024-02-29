@@ -35,10 +35,19 @@ import java.math.BigDecimal;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class State implements Cloneable
 {
+	static final AtomicLong NEXT_ID = new AtomicLong(0);
+	final long id = NEXT_ID.getAndIncrement();
+
+	public long getUniqueId() {
+		return id;
+	}
+
 	public GroundCondition goal;
+	//public Action reachedThrough;
 
 //	public Filter filter = null;
 
@@ -54,13 +63,13 @@ public abstract class State implements Cloneable
 
 //	public abstract Set getNextStates();       // get all the next possible states reachable from this state
 
-	public Set getNextStates(Set actions)      // get all the states after applying this set of actions
+	public Set<State> getNextStates(Set<Action> actions)      // get all the states after applying this set of actions
 	{
-		Set rSet = new HashSet();
-		Iterator ait = actions.iterator();
+		Set<State> rSet = new HashSet<State>();
+		Iterator<Action> ait = actions.iterator();
 		while (ait.hasNext())
 		{
-			Action a = (Action) ait.next();
+			Action a = ait.next();
 			rSet.add(this.apply(a));
 		}
 		return rSet;
@@ -76,6 +85,7 @@ public abstract class State implements Cloneable
 			javaff.JavaFF.errorOutput.println(e);
 		}
 		a.apply(s);
+		//s.reachedThrough = a;
 		return s;
 	}
 

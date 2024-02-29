@@ -28,13 +28,19 @@
 
 package javaff.data.strips;
 
-public class OperatorName
+import java.io.Serializable;
+
+public class OperatorName implements Serializable, Cloneable
 {
 	protected String name;
 
 	public OperatorName(String n)
 	{
 		name = n;
+	}
+
+	public Object clone(){
+		return new OperatorName(this.name);
 	}
 
 	public String toString()
@@ -56,6 +62,4 @@ public class OperatorName
 	{
 		return name.hashCode();
 	}
-
-	
 }

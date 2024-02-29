@@ -34,13 +34,16 @@ import javaff.data.GroundCondition;
 import javaff.data.TotalOrderPlan;
 import javaff.data.Metric;
 import javaff.data.Action;
+import javaff.data.metric.NamedFunction;
 import javaff.data.strips.InstantAction;
+import javaff.data.strips.Proposition;
 import javaff.data.temporal.DurativeAction;
 import javaff.data.temporal.StartInstantAction;
 import javaff.data.temporal.SplitInstantAction;
 import javaff.scheduling.SchedulabilityChecker;
 import javaff.scheduling.VelosoSchedulabilityChecker;
 
+import java.math.BigDecimal;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
@@ -48,13 +51,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Hashtable;
-//import java.math.BigDecimal;
 
 public class TemporalMetricState extends MetricState
 {
 	public Set openActions;         //Set of (DurativeActions)
 	public List invariants;	        //Set of Propositions (Propositions)
 	public SchedulabilityChecker checker;
+
+	public BigDecimal currInstant = BigDecimal.ZERO;
 
 	protected TemporalMetricState(Set a, Set f, GroundCondition g, Map funcs, TotalOrderPlan p, Metric m, Set oAc, List i)
 	{
@@ -70,6 +74,20 @@ public class TemporalMetricState extends MetricState
 		invariants = new ArrayList();
 		checker = new VelosoSchedulabilityChecker();
 		
+	}
+	public String toString(){
+		String s = "";
+		for(Proposition p : (Set<Proposition>)this.facts)
+			s+=(p)+"\n";
+		for(NamedFunction nf : (Set<NamedFunction>)this.funcValues.keySet())
+			s+=(nf)+" " + this.funcValues.get(nf) +"\n";
+		return s;
+	}
+
+
+	public int getRealGValue()
+	{
+		return (plan.getPlanLength()/2);
 	}
 
 	public boolean goalReached()
@@ -129,7 +147,39 @@ public class TemporalMetricState extends MetricState
 		s.checker.addAction((InstantAction)a, s);
 		return s;
 	}
-	
+
+	public Set<Proposition> getInitActionFacts(){
+		Set<Proposition> filteredFacts = new HashSet<>();
+		for(DurativeAction da : (HashSet<DurativeAction>)openActions)
+			for(Proposition f : facts)
+				if(!f.isDomainDefined() && ("i"+da.name.toString()).equals(f.getName()))
+					filteredFacts.add(f);
+		return filteredFacts;
+	}
+
+	public boolean equals(Object obj)
+	{
+		if (obj instanceof MetricState)
+		{
+			TemporalMetricState s = (TemporalMetricState) obj;
+			return (s.getDomainDefinedFacts().equals(getDomainDefinedFacts()) && s.getInitActionFacts().equals(getInitActionFacts()) && s.funcValues.equals(funcValues));
+		}
+		else return false;
+	}
+
+	public int hashCode()
+	{
+		int hash = 8;
+		hash = 31 * hash ^ getDomainDefinedFacts().hashCode();
+		hash = 31 * hash ^ getInitActionFacts().hashCode();
+		hash = 31 * hash ^ funcValues.hashCode();
+		return hash;
+	}
+
+	public void rebasePlan(List<Action> committedOrderedActions) {
+		plan.getOrderedActions().removeAll(committedOrderedActions);
+	}
+
 	//public BigDecimal getGValue()
 	//{
 		//return super.getGValue().subtract(new BigDecimal(openActions.size()));

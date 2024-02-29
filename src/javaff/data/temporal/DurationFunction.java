@@ -34,10 +34,11 @@ import javaff.data.metric.NumberFunction;
 import javaff.planning.MetricState;
 import javaff.scheduling.MatrixSTN;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.math.BigDecimal;
 
-public class DurationFunction extends NamedFunction
+public class DurationFunction extends NamedFunction implements Serializable, Cloneable
 {
 	public DurativeAction durativeAction;
 	UngroundDurativeAction ungroundDurativeAction;        //horrible hack

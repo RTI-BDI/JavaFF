@@ -34,7 +34,7 @@ import javaff.scheduling.MatrixSTN;
 import java.math.BigDecimal;
 import java.util.Map;
 
-public class BinaryFunction implements Function
+public class BinaryFunction implements Function, Cloneable
 {
 
     public Function first, second;
@@ -56,6 +56,10 @@ public class BinaryFunction implements Function
 		type = t;
 		first = f1;
 		second = f2;
+	}
+
+	public Object clone(){
+		return new BinaryFunction(type, first, second);
 	}
 
 	public boolean effectedBy(ResourceOperator ro)

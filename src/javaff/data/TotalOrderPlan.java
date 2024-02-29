@@ -28,6 +28,8 @@
 
 package javaff.data;
 
+import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
@@ -37,9 +39,9 @@ import java.util.ListIterator;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-public class TotalOrderPlan implements Plan, Cloneable
+public class TotalOrderPlan implements Plan, Cloneable, Serializable
 {
-	private List plan = new ArrayList();
+	private List<Action> plan = new ArrayList();
 
 	public Object clone()
 	{
@@ -48,10 +50,7 @@ public class TotalOrderPlan implements Plan, Cloneable
 		return rTOP;
 	}
 
-	public void addAction(Action a)
-	{
-		plan.add(a);
-	}
+	public void addAction(Action a) {plan.add(a);}
 
 	public int getPlanLength()
 	{
@@ -73,9 +72,13 @@ public class TotalOrderPlan implements Plan, Cloneable
 		return plan.listIterator(plan.indexOf(a));
 	}
 
-	public Set getActions()
+	public Set<Action> getActions()
 	{
-		return new HashSet(plan);
+		return new HashSet<Action>(plan);
+	}
+	public List<Action> getOrderedActions()
+	{
+		return (plan);
 	}
 	
 	public boolean equals(Object obj)
@@ -109,5 +112,16 @@ public class TotalOrderPlan implements Plan, Cloneable
 		{
 			pw.println("("+pit.next()+")");
 		}
+	}
+
+	public String getPrintablePlan()
+	{
+		StringBuilder printablePlan = new StringBuilder();
+		Iterator pit = plan.iterator();
+		while (pit.hasNext())
+		{
+			printablePlan.append("(").append(pit.next()).append(")\n");
+		}
+		return printablePlan.toString();
 	}
 }

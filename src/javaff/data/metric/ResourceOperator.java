@@ -42,7 +42,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 
-public class ResourceOperator implements javaff.data.GroundEffect, javaff.data.UngroundEffect
+public class ResourceOperator implements javaff.data.GroundEffect, javaff.data.UngroundEffect, Cloneable
 {
 	public NamedFunction resource; // will be a named function
     public Function change;
@@ -65,6 +65,10 @@ public class ResourceOperator implements javaff.data.GroundEffect, javaff.data.U
 		type = t;
 		resource = r;
 		change = c;
+	}
+
+	public Object clone(){
+		return new ResourceOperator(type, resource, change);
 	}
 	
     public void apply(State s)

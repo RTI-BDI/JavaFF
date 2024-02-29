@@ -28,6 +28,8 @@
 
 package javaff.data;
 
+import javaff.data.temporal.DurativeAction;
+
 import java.math.BigDecimal;
 
 public class TimeStampedAction implements Comparable
@@ -35,6 +37,10 @@ public class TimeStampedAction implements Comparable
 	public Action action;
 	public BigDecimal time;
 	public BigDecimal duration;
+
+	public boolean committed = false;
+
+	public short status = 0;
 
 	public TimeStampedAction(Action a, BigDecimal t, BigDecimal d)
 	{
@@ -47,6 +53,44 @@ public class TimeStampedAction implements Comparable
 	{
 		String str = time +": ("+action+")";
 		if (duration != null) str += " ["+duration+"]";
+		return str;
+	}
+
+	public String toStringFullNameTimex1000()
+	{
+		return "("+action+"):"+((int)(time.floatValue()*1000));
+	}
+
+	public String toStringWithExecStatus()
+	{
+		String runningStatus = "";
+		switch(status)
+		{
+			case 0:
+				runningStatus = "WAITING";
+				break;
+			case 1:
+				runningStatus = "RUNNING";
+				break;
+			case 2:
+				runningStatus = "RUN_SUC";
+				break;
+			case 3:
+				runningStatus = "SUCCESS";
+				break;
+			case 4:
+				runningStatus = "FAILURE";
+				break;
+		}
+		String str = runningStatus +
+				"\t" + (committed? "COMMIT" : "NO_COM") +
+			"\t" + time +": ("+action+")";
+		if (duration != null) str += " ["+duration+"]";
+		if(action instanceof DurativeAction)
+		{
+			DurativeAction da = (DurativeAction) action;
+			str += " interval:[" + da.startAction.predictedInstant + ":" + da.endAction.predictedInstant +"]";
+		}
 		return str;
 	}
 

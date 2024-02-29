@@ -30,7 +30,9 @@ package javaff.data.strips;
 
 import javaff.data.Type;
 
-public class Variable extends javaff.data.Parameter 
+import java.io.Serializable;
+
+public class Variable extends javaff.data.Parameter implements Serializable, Cloneable
 {
 	public Variable(String n)
     {
@@ -42,7 +44,9 @@ public class Variable extends javaff.data.Parameter
 		super(n,t);
 	}
 
-
+	public Object clone(){
+		return new Variable(name,type);
+	}
 	public int hashCode()
     {
 		int hash = 9;

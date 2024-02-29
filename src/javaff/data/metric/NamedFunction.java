@@ -28,17 +28,22 @@
 
 package javaff.data.metric;
 
+import javaff.data.Parameter;
 import javaff.data.strips.Variable;
 import javaff.data.strips.PredicateSymbol;
 import javaff.data.strips.PDDLObject;
 import javaff.planning.MetricState;
 import javaff.scheduling.MatrixSTN;
 
+import javax.naming.Name;
+import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
 
-public class NamedFunction extends javaff.data.Literal implements Function
+public class NamedFunction extends javaff.data.Literal implements Function, Serializable, Cloneable
 {
 	protected NamedFunction()
     {
@@ -48,6 +53,18 @@ public class NamedFunction extends javaff.data.Literal implements Function
 	public NamedFunction(FunctionSymbol fs)
     {
 		super.setPredicateSymbol((PredicateSymbol)fs);
+	}
+
+	public Object clone(){
+		NamedFunction nf = new NamedFunction();
+		nf.name = (PredicateSymbol) name.clone();
+		for(Parameter p : (ArrayList<Parameter>)parameters) {
+			if (p instanceof Variable)
+				nf.parameters.add((Parameter) ((Variable) p).clone());
+			else if (p instanceof PDDLObject)
+				nf.parameters.add((Parameter) ((PDDLObject) p).clone());
+		}
+		return nf;
 	}
 	
 	public BigDecimal getValue(MetricState ms)

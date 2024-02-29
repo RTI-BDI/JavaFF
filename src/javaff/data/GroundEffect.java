@@ -29,10 +29,12 @@
 package javaff.data;
 
 import javaff.planning.State;
+
+import java.io.Serializable;
 import java.util.Set;
 import java.util.Map;
 
-public interface GroundEffect extends Effect
+public interface GroundEffect extends Effect, Serializable
 {
 	public void apply(State s); // carry out the effects of this on State s
 	public void applyAdds(State s);

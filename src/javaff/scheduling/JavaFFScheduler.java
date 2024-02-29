@@ -28,26 +28,19 @@
 
 package javaff.scheduling;
 
-import javaff.data.TotalOrderPlan;
-import javaff.data.PartialOrderPlan;
-import javaff.data.TimeStampedPlan;
-import javaff.data.GroundProblem;
-import javaff.data.Action;
-import javaff.data.Metric;
+import javaff.data.*;
 import javaff.data.metric.BinaryComparator;
 import javaff.data.metric.ResourceOperator;
 import javaff.data.metric.NumberFunction;
 import javaff.data.metric.NamedFunction;
 import javaff.data.metric.MetricSymbolStore;
 import javaff.data.metric.TotalTimeFunction;
+import javaff.data.strips.OperatorName;
+import javaff.data.temporal.SplitInstantAction;
 import javaff.data.temporal.StartInstantAction;
 import javaff.planning.TemporalMetricState;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Hashtable;
+import java.util.*;
 import java.math.BigDecimal;
 
 public class JavaFFScheduler implements Scheduler
@@ -61,6 +54,29 @@ public class JavaFFScheduler implements Scheduler
 
 	public TimeStampedPlan schedule(TotalOrderPlan top)
 	{
+		// ATTENTION PLEASE: really important to mark down exhaustively diff actions with same signature within the same plan,
+		// otherwise rescheduling won't work!!! Using an instance counter to distinguish and match them appropriately
+
+		HashMap<String, Integer> counters = new HashMap<>();
+		for(Action a : top.getOrderedActions())
+		{
+			int counter = 1;
+			if(a instanceof SplitInstantAction)
+			{
+				SplitInstantAction sia = (SplitInstantAction) a;
+				if(!counters.containsKey(sia.toStringBase()))
+					counters.put(sia.toStringBase(), counter);
+				else{
+					counter = ((Integer)counters.get(sia.toStringBase()))+1;
+					counters.put(sia.toStringBase(), counter);
+				}
+				
+				sia.instanceCounter = counter; // WITHOUT THIS YOU'RE FU***D
+				sia.parent.startAction.instanceCounter = counter; // WITHOUT THIS YOU'RE FU***D
+				sia.parent.endAction.instanceCounter = counter; // WITHOUT THIS YOU'RE FU***D
+			}
+		}
+
 		PartialOrderPlan pop = GreedyPartialOrderLifter.lift(top, problem);
 
 		MatrixSTN stn = new MatrixSTN(top);
@@ -70,7 +86,7 @@ public class JavaFFScheduler implements Scheduler
 
 		//Sort out the Durations
 		Map states = new Hashtable(); //Maps (Actions => states (which the actions are applied in))
-		Iterator ait = top.getActions().iterator();
+		Iterator ait = top.getOrderedActions().iterator();
 		TemporalMetricState state = problem.getTemporalMetricInitialState();
 		while (ait.hasNext())
 		{
@@ -87,11 +103,11 @@ public class JavaFFScheduler implements Scheduler
 
 		
 		
-		stn.consistent();
+		boolean consistent = stn.consistent();
 
 		// sort out the resources
 		Map graphs = new Hashtable(); //Maps (NamedResources => PrecedenceGraphs)
-		ait = top.getActions().iterator();
+		ait = top.getOrderedActions().iterator();
 		while (ait.hasNext())
 		{
 			Action a = (Action) ait.next();
@@ -157,8 +173,10 @@ public class JavaFFScheduler implements Scheduler
 		if (m != null && m.func instanceof NamedFunction && !(m.func instanceof TotalTimeFunction))
 		{
 			PrecedenceResourceGraph prg = (PrecedenceResourceGraph) graphs.get((NamedFunction) m.func);
-			if (m.type == Metric.MAXIMIZE) prg.maximize();
-			else if (m.type == Metric.MINIMIZE) prg.minimize();
+			if(prg != null) {
+				if (m.type == Metric.MAXIMIZE) prg.maximize();
+				else if (m.type == Metric.MINIMIZE) prg.minimize();
+			}
 		}
 
 		stn.constrain();
@@ -168,6 +186,14 @@ public class JavaFFScheduler implements Scheduler
 		stn.constrain();
 		
 		TimeStampedPlan p = stn.getTimes();
+
+		// (s1)... carrier_c in loading_c
+		//  (s1) move1 (s2) -> pickup -> move2 -> putdown1
+		// (s2)
+		// (s2) = (s2_reale); s3 = s2.apply(pickup)
+		// (s2)
+		//  (s1) move1 (s2) -> (s2) pickup (s3) -> move2 -> putdown1
+		// (s3)
 
 		return p;
 	}

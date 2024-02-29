@@ -29,15 +29,17 @@
 package javaff.data;
 
 import javaff.data.strips.PredicateSymbol;
+
+import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.io.PrintStream;
 
-public abstract class Literal implements Condition, Effect
+public abstract class Literal implements Condition, Effect, Serializable
 {
 	protected PredicateSymbol name;
-    protected List parameters = new ArrayList(); // list of Parameters
+    protected List parameters = new ArrayList<Parameter>(); // list of Parameters
 
 	public void setPredicateSymbol(PredicateSymbol n)
 	{
@@ -52,6 +54,13 @@ public abstract class Literal implements Condition, Effect
 	public List getParameters()
 	{
 		return parameters;
+	}
+
+	public ArrayList<String> getStringParameters() {
+		ArrayList<String> params = new ArrayList<>();
+		for(Parameter p : (ArrayList<Parameter>) parameters)
+			params.add(p.getName());
+		return params;
 	}
 
 	public void addParameter(Parameter p)

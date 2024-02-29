@@ -32,6 +32,7 @@ import javaff.data.GroundCondition;
 import javaff.data.TotalOrderPlan;
 import javaff.data.Metric;
 import javaff.data.metric.NamedFunction;
+import javaff.data.strips.Proposition;
 
 import java.util.Set;
 import java.util.HashSet;
@@ -41,7 +42,7 @@ import java.math.BigDecimal;
 
 public class MetricState extends STRIPSState
 {
-	public Map funcValues; //maps Named Functions onto BigDecimals
+	public Map<NamedFunction, BigDecimal> funcValues; //maps Named Functions onto BigDecimals
 	public Metric metric;
 
 	protected MetricState()
@@ -100,7 +101,7 @@ public class MetricState extends STRIPSState
 		if (obj instanceof MetricState)
 		{
 			MetricState s = (MetricState) obj;
-			return (s.facts.equals(facts) && s.funcValues.equals(funcValues));
+			return (s.getDomainDefinedFacts().equals(getDomainDefinedFacts()) && s.funcValues.equals(funcValues));
 		}
 		else return false;
 	}
@@ -108,7 +109,7 @@ public class MetricState extends STRIPSState
 	public int hashCode()
 	{
 		int hash = 8;
-		hash = 31 * hash ^ facts.hashCode();
+		hash = 31 * hash ^ getDomainDefinedFacts().hashCode();
 		hash = 31 * hash ^ funcValues.hashCode();
 		return hash;
 	}

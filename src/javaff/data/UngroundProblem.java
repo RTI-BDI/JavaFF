@@ -3,27 +3,27 @@
  * Department of Computer and Information Sciences,
  * University of Strathclyde, Glasgow, UK
  * http://planning.cis.strath.ac.uk/
- * 
+ *
  * Copyright 2007, Keith Halsey
  * Copyright 2008, Andrew Coles and Amanda Smith
  *
  * (Questions/bug reports now to be sent to Andrew Coles)
  *
  * This file is part of JavaFF.
- * 
+ *
  * JavaFF is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * JavaFF is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with JavaFF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  ************************************************************************/
 
 package javaff.data;
@@ -46,17 +46,17 @@ import java.util.Iterator;
 
 public class UngroundProblem
 {
-    public String DomainName;                               // Name of Domain
-    public String ProblemName;                              // Name of Problem
+	public String DomainName;                               // Name of Domain
+	public String ProblemName;                              // Name of Problem
 	public String ProblemDomainName;                        // Name of Domain as specified by the Problem
 
 	public Set requirements = new HashSet();                // Requirements of the domain     (String)
 
-    public Set types = new HashSet();                       // For simple object types in this domain       (SimpleTypes)
+	public Set types = new HashSet();                       // For simple object types in this domain       (SimpleTypes)
 	public Map typeMap = new Hashtable();                   // Set for mapping String -> types  (String => Type)
 	public Map typeSets = new Hashtable();                 // Maps a type on to a set of PDDLObjects (Type => Set (PDDLObjects))
 
-    public Set predSymbols = new HashSet();                 // Set of all (ungrounded) predicate     (PredicateSymbol)
+	public Set predSymbols = new HashSet();                 // Set of all (ungrounded) predicate     (PredicateSymbol)
 	public Map predSymbolMap = new Hashtable();             // Maps Strings of the symbol to the Symbols (String => PredicateSymbol)
 
 	public Set constants = new HashSet();                   // Set of all constant           (PDDLObjects)
@@ -68,7 +68,7 @@ public class UngroundProblem
 	public Set actions = new HashSet();                     // List of all (ungrounded) actions      (Operators)
 
 	public Set objects = new HashSet();                     // Objects in the problem        (PDDLObject)
-    public Map objectMap =  new Hashtable();                // Maps Strings onto PDDLObjects (String => PDDLObject)
+	public Map objectMap =  new Hashtable();                // Maps Strings onto PDDLObjects (String => PDDLObject)
 
 	public Set initial = new HashSet();                     // Set of initial facts          (Proposition)
 	public Map funcValues = new Hashtable();                // Maps functions onto numbers (NamedFunction => BigDecimal)
@@ -81,13 +81,15 @@ public class UngroundProblem
 	public UngroundProblem()
 	{
 		typeMap.put(SimpleType.rootType.toString(), SimpleType.rootType);
-	}	
-	
+	}
+
 	public GroundProblem ground()
-    {
-		calculateStatics();
-		makeStaticPropositionMap();
-		buildTypeSets();
+	{
+		calculateStatics(); //  Determines whether the predicateSymbols and funcSymbols are static or not wrt. PDDL domain action def.
+		makeStaticPropositionMap(); // Insert in staticPropositionMap all predicate instances which are never going to change
+		buildTypeSets(); // build following MAP {KEY = type T -> VALUE = set of objects and constants of type T}
+
+		// actions' grounding (generate all possible combinations)
 		Set groundActions = new HashSet();
 		Iterator ait = actions.iterator();
 		while (ait.hasNext())
@@ -97,7 +99,7 @@ public class UngroundProblem
 			groundActions.addAll(s);
 		}
 
-		//static-ify the functions
+		//static-ify the actions' functions (convert all function instances which are never going to change to True Condition)
 		Iterator gait = groundActions.iterator();
 		while (gait.hasNext())
 		{
@@ -105,14 +107,14 @@ public class UngroundProblem
 			a.staticify(funcValues);
 		}
 
-    //remove static functions from the intial state
-    removeStaticsFromInitialState();
+		//remove static propositions from the initial state
+		removeStaticsFromInitialState();
 
 		//-could put in code here to
 		// a) get rid of static functions in initial state - DONE
 		// b) get rid of static predicates in initial state - DONE
 		// c) get rid of static propositions in the actions (this may have already been done)
-		// d) get rid of no use actions (i.e. whose preconditions can't be achieved) 
+		// d) get rid of no use actions (i.e. whose preconditions can't be achieved)
 
 		GroundProblem rGP = new GroundProblem(groundActions, initial, goal, funcValues, metric);
 		return rGP;
@@ -202,9 +204,9 @@ public class UngroundProblem
 		}
 	}
 
-  private void removeStaticsFromInitialState()
-  {
-  	//remove static functions
+	private void removeStaticsFromInitialState()
+	{
+		//remove static functions
 	  /*
   	Iterator fit = funcValues.keySet().iterator();
     Set staticFuncs = new HashSet();
@@ -220,15 +222,15 @@ public class UngroundProblem
       funcValues.remove(o);
     }*/
 
-    //remove static Propositions
-    Iterator init = initial.iterator();
-    Set staticProps = new HashSet();
-    while (init.hasNext())
-    {
-    	Proposition p = (Proposition) init.next();
-      if (p.isStatic()) staticProps.add(p);
-    }
-    initial.removeAll(staticProps);
-  }
+		//remove static Propositions
+		Iterator init = initial.iterator();
+		Set staticProps = new HashSet();
+		while (init.hasNext())
+		{
+			Proposition p = (Proposition) init.next();
+			if (p.isStatic()) staticProps.add(p);
+		}
+		initial.removeAll(staticProps);
+	}
 
 }

@@ -21,81 +21,56 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import java.io.ByteArrayInputStream;
+
 import java.math.BigDecimal;
 
 public class PDDL21parser implements PDDL21parserConstants {
-        protected static UngroundProblem UP = new UngroundProblem();
+    protected static UngroundProblem UP = new UngroundProblem();
 
-    public static UngroundProblem parseFiles(File pDomainFile, File pProblemFile)
+    public static UngroundProblem parseDomainAndProblem(String domain, String problem)
     {
+                UP = new UngroundProblem();
                 boolean probsuc = false;
-                boolean suc = parseDomainFile(pDomainFile);
-                if (suc) probsuc = parseProblemFile(pProblemFile);
+                boolean suc = parseDomain(domain);
+                if (suc) probsuc = parseProblem(problem);
                 if (probsuc) return UP;
                 else return null;
     }
 
-    private static boolean parseDomainFile(File pFile)
+    private static boolean parseDomain(String domain)
     {
                 boolean req = false;
         try
         {
-            FileReader tFileReader = new FileReader(pFile);
-                        PDDL21parser parser = new PDDL21parser(tFileReader);
+            PDDL21parser parser = new PDDL21parser(new ByteArrayInputStream(domain.getBytes()));
             req = parser.parseDomain();
-            tFileReader.close();
-                }
-                catch (FileNotFoundException e)
-                {
-            JavaFF.parsingOutput.println("File "+pFile+" has not been found");
-            req = false;
-                }
-                catch (IOException e)
-                {
-            JavaFF.parsingOutput.println("Unknown IOException caught");
-            JavaFF.parsingOutput.println(e.getMessage());
-            req = false;
-                }
+        }
         catch (ParseException e)
         {
-            JavaFF.parsingOutput.println("Error whilst parsing file "+pFile);
+            JavaFF.parsingOutput.println("Error whilst parsing domain ");
             JavaFF.parsingOutput.println(e.getMessage());
             req = false;
         }
-        if (req) JavaFF.parsingOutput.println("Parsed Domain file "+pFile+" successfully");
-                else JavaFF.parsingOutput.println("Parsing of Domain file "+pFile+" failed");
+        if (!req) JavaFF.parsingOutput.println("Parsing of domain failed");
                 return req;
     }
 
-    private static boolean parseProblemFile(File pFile)
+    private static boolean parseProblem(String problem)
     {
-                boolean probsuc = true;
+        boolean probsuc = true;
         try
         {
-            FileReader tFileReader = new FileReader(pFile);
-                        PDDL21parser parser = new PDDL21parser(tFileReader);
+            PDDL21parser parser = new PDDL21parser(new ByteArrayInputStream(problem.getBytes()));
             parser.parseProblem();
-            tFileReader.close();
-                }
-                catch (FileNotFoundException e)
-                {
-            JavaFF.parsingOutput.println("File "+pFile+" has not been found");
-            probsuc = false;
-                }
-                catch (IOException e)
-                {
-            JavaFF.parsingOutput.println("Unknown IOException caught");
-            JavaFF.parsingOutput.println(e.getMessage());
-            probsuc = false;
-                }
+        }
         catch (ParseException e)
         {
-            JavaFF.parsingOutput.println("Error whilst parsing file "+pFile);
+            JavaFF.parsingOutput.println("Error whilst parsing problem ");
             JavaFF.parsingOutput.println(e.getMessage());
             probsuc = false;
         }
-        if (probsuc) JavaFF.parsingOutput.println("Parsed Problem file "+pFile+" successfully");
-                else JavaFF.parsingOutput.println("Parsing Problem file "+pFile+" failed");
+        if (!probsuc) JavaFF.parsingOutput.println("Parsing problem failed");
                 return probsuc;
     }
 
@@ -422,7 +397,7 @@ public class PDDL21parser implements PDDL21parserConstants {
                 PredicateSymbol ps = (PredicateSymbol) UP.predSymbolMap.get(t.toString());
                 if (ps == null)
                 {
-                        ps = new PredicateSymbol(t.toString());
+                        ps = new PredicateSymbol(t.toString(), true);
                         UP.predSymbolMap.put(t.toString(), ps);
                 }
                 {if (true) return ps;}
@@ -674,7 +649,7 @@ public class PDDL21parser implements PDDL21parserConstants {
                 FunctionSymbol fs = (FunctionSymbol) UP.funcSymbolMap.get(t.toString());
                 if (fs == null)
                 {
-                        fs = new FunctionSymbol(t.toString());
+                        fs = new FunctionSymbol(t.toString(), true);
                         UP. funcSymbolMap.put(t.toString(), fs);
                 }
                 {if (true) return fs;}

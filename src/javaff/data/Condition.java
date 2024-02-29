@@ -30,7 +30,9 @@ package javaff.data;
 
 import javaff.planning.State;
 
-public interface Condition extends PDDLPrintable
+import java.io.Serializable;
+
+public interface Condition extends PDDLPrintable, Serializable
 {
 	public boolean isStatic();      // returns whether this condition is static
 }

@@ -30,8 +30,9 @@ package javaff.data;
 
 import javaff.data.strips.SimpleType;
 import java.io.PrintStream;
+import java.io.Serializable;
 
-public abstract class Parameter implements PDDLPrintable
+public abstract class Parameter implements PDDLPrintable, Serializable
 {
 	protected String name;
 	protected Type type;
