@@ -6,3 +6,6 @@ javaff/.idea/*
 javaff/src/main/java/javaff/.idea/*
 javaff/src/main/java/it/unitn/rti/bdi/javaff/TestNode.java
 .gradle/*
+
+.DS_Store
+gradle.properties
