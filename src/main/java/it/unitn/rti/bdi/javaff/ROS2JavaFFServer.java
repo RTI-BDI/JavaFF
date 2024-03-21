@@ -26,7 +26,7 @@ public class ROS2JavaFFServer extends BaseComposableNode{
     private Service<lifecycle_msgs.srv.GetState> getStateService;
 
     public ROS2JavaFFServer(String name, String namespace) {
-        super(name, namespace);
+        super(name);
 
         try{
             this.planService =
