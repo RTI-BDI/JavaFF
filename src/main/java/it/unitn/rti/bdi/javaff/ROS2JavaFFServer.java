@@ -1,6 +1,9 @@
 package it.unitn.rti.bdi.javaff;
 
-import org.ros2.rcljava.node.BaseComposableNode;
+import org.ros2.rcljava.RCLJava;
+import org.ros2.rcljava.node.ComposableNode;
+import org.ros2.rcljava.node.Node;
+import org.ros2.rcljava.node.NodeOptions;
 import org.ros2.rcljava.service.RMWRequestId;
 import org.ros2.rcljava.service.Service;
 
@@ -10,8 +13,17 @@ import it.unitn.rti.bdi.javaff.SearchParams;
 // JUST A FRONT END NODE FOR THE SERVICES FORWARDING 1->1 calls to ROS2JavaFFSearch
 // why did I create it? That's a great question... but if you came here and you understood what this node effectively do, 
 // you're probably on the right track xD
-public class ROS2JavaFFServer extends BaseComposableNode{
+public class ROS2JavaFFServer implements ComposableNode {
     
+    private final String name;
+    private final String namespace;
+
+    protected final Node node;
+
+    public Node getNode() {
+      return node;
+    }
+
     // Sibling node carrying on planning search tasks
     private ROS2JavaFFSearch searchNode;
     
@@ -26,7 +38,10 @@ public class ROS2JavaFFServer extends BaseComposableNode{
     private Service<lifecycle_msgs.srv.GetState> getStateService;
 
     public ROS2JavaFFServer(String name, String namespace) {
-        super(name);
+        
+        this.name = name;
+        this.namespace = namespace;
+        this.node = RCLJava.createNode(this.name, this.namespace, RCLJava.getDefaultContext(), new NodeOptions());
 
         try{
             this.planService =

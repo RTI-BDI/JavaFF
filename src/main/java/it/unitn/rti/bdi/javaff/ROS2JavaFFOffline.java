@@ -14,7 +14,9 @@ import java.math.BigDecimal;
 
 import org.ros2.rcljava.RCLJava;
 import org.ros2.rcljava.executors.SingleThreadedExecutor;
-import org.ros2.rcljava.node.BaseComposableNode;
+import org.ros2.rcljava.node.ComposableNode;
+import org.ros2.rcljava.node.Node;
+import org.ros2.rcljava.node.NodeOptions;
 
 import javaff.JavaFF;
 import javaff.planning.State;
@@ -24,10 +26,23 @@ import javaff.data.GroundProblem;
 import javaff.data.TimeStampedAction;
 import javaff.data.TimeStampedPlan;
 
-public class ROS2JavaFFOffline extends BaseComposableNode{
+public class ROS2JavaFFOffline implements ComposableNode {
+    
+    private final String name;
+    private final String namespace;
 
-    public ROS2JavaFFOffline(String name/*, String namespace, */) {
-      super(name);
+    protected final Node node;
+
+    public Node getNode() {
+      return node;
+    }
+
+    public ROS2JavaFFOffline(String name, String namespace) {
+
+      this.name = name;
+      this.namespace = namespace;
+      this.node = RCLJava.createNode(this.name, this.namespace, RCLJava.getDefaultContext(), new NodeOptions());
+
     } 
 
     private static String readFile(String filepath) throws FileNotFoundException {
@@ -70,10 +85,10 @@ public class ROS2JavaFFOffline extends BaseComposableNode{
       for(String a : args)
         System.out.println(a);
   
-      //retrieve namespace from cli args[]
-      //String ns = String.join("", args);
-      //ns = ns.substring(ns.lastIndexOf("ns:=/") + "ns:=/".length());
-      //System.out.println("Setting up namespace \"" + ns + "\"");
+      // retrieve namespace from cli args[];
+      String ns = String.join("", args);
+      ns = ns.substring(ns.lastIndexOf("ns:=/") + "ns:=/".length());
+      System.out.println("Setting up namespace \"" + ns + "\"");
       
       System.out.println("Reading domain file from \"" + args[0] + "\"");
       String domain = readFile(args[0]);
@@ -85,7 +100,7 @@ public class ROS2JavaFFOffline extends BaseComposableNode{
       RCLJava.rclJavaInit();
   
       //SingleThreadedExecutor exec = new SingleThreadedExecutor();
-      ROS2JavaFFOffline javaffSearchNode = new ROS2JavaFFOffline("javaff_search");
+      ROS2JavaFFOffline javaffSearchNode = new ROS2JavaFFOffline("javaff_search", ns);
       javaffSearchNode.offlineSearch(domain, problem);
       //exec.addNode(javaffSearchNode);
       //exec.spin();

@@ -2,13 +2,16 @@ package it.unitn.rti.bdi.javaff;
 
 import org.ros2.rcljava.publisher.Publisher;
 import org.ros2.rcljava.subscription.Subscription;
+import org.ros2.rcljava.RCLJava;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
 
-import org.ros2.rcljava.node.BaseComposableNode;
+import org.ros2.rcljava.node.ComposableNode;
+import org.ros2.rcljava.node.Node;
+import org.ros2.rcljava.node.NodeOptions;
 
 import javaff.JavaFF;
 import javaff.planning.TemporalMetricState;
@@ -30,7 +33,16 @@ enum ForecastPlanFailureRes{
   NOT_COMP //not computed
 }
 
-public class ROS2JavaFFSearch extends BaseComposableNode{
+public class ROS2JavaFFSearch implements ComposableNode {
+
+    private final String name;
+    private final String namespace;
+
+    protected final Node node;
+
+    public Node getNode() {
+      return node;
+    }
     
     // Sibling node handling service request wrt. online planning
     private ROS2JavaFFServer serverNode;
@@ -272,7 +284,11 @@ public class ROS2JavaFFSearch extends BaseComposableNode{
      * @minCommitSteps minimum number of sequential actions that will be considered committed when action a which has just started running (therefore committed) starts
     */
     public ROS2JavaFFSearch(String name, String namespace, String domain, boolean debug, int minCommitSteps, int simToN) {
-      super(name);
+      
+      this.name = name;
+      this.namespace = namespace;
+      this.node = RCLJava.createNode(this.name, this.namespace, RCLJava.getDefaultContext(), new NodeOptions());
+      
       this.domain = domain;
       this.debug = debug;
       this.minCommitSteps = minCommitSteps;
